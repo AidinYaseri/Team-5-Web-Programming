@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          # Match this to the <TargetFramework> in your .csproj (net8.0 -> 8.0.x, net9.0 -> 9.0.x)
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run tests
+        run: dotnet test --no-build --configuration Release --verbosity normal
+
+      # Checks that your EF Core migrations compile and generate valid SQL.
+      # This does NOT connect to a database, so no SQL Server is needed in CI.
+      - name: Install EF Core tools
+        run: dotnet tool install --global dotnet-ef --version 8.*
+
+      - name: Verify EF Core migrations
+        run: dotnet ef migrations script --idempotent --configuration Release --output migrations.sql
