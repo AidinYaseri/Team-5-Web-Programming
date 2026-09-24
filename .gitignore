@@ -1,1 +1,6 @@
 ﻿/Animal.Domain/Models/Shelter.cs
+.vs/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
