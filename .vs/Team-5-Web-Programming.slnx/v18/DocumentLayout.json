@@ -1,7 +1,20 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "C:\\Users\\csbco\\Downloads\\Team-5-Web-Programming\\",
-  "Documents": [],
+  "WorkspaceRootPath": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{B45E21F4-3ABB-B5DB-2053-076C7D374945}|Animal.API\\Animal.API.csproj|c:\\users\\csbco\\downloads\\new folder (9)\\team-5-web-programming\\animal.api\\animal.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{B45E21F4-3ABB-B5DB-2053-076C7D374945}|Animal.API\\Animal.API.csproj|solutionrelative:animal.api\\animal.api.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{50AF19A0-35F9-4904-8367-AB5C285E7B28}|Animal.Data\\Animal.Data.csproj|c:\\users\\csbco\\downloads\\new folder (9)\\team-5-web-programming\\animal.data\\animal.data.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{50AF19A0-35F9-4904-8367-AB5C285E7B28}|Animal.Data\\Animal.Data.csproj|solutionrelative:animal.data\\animal.data.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{3DA46CF6-BACD-4CDF-93CC-0E9BE8F87274}|Animal.Domain\\Animal.Domain.csproj|c:\\users\\csbco\\downloads\\new folder (9)\\team-5-web-programming\\animal.domain\\animal.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{3DA46CF6-BACD-4CDF-93CC-0E9BE8F87274}|Animal.Domain\\Animal.Domain.csproj|solutionrelative:animal.domain\\animal.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,11 +22,50 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{1c4feeaa-4718-4aa9-859d-94ce25d182ba}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Animal.API.csproj",
+              "DocumentMoniker": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.API\\Animal.API.csproj",
+              "RelativeDocumentMoniker": "Animal.API\\Animal.API.csproj",
+              "ToolTip": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.API\\Animal.API.csproj",
+              "RelativeToolTip": "Animal.API\\Animal.API.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-24T02:45:11.229Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Animal.Data.csproj",
+              "DocumentMoniker": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.Data\\Animal.Data.csproj",
+              "RelativeDocumentMoniker": "Animal.Data\\Animal.Data.csproj",
+              "ToolTip": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.Data\\Animal.Data.csproj",
+              "RelativeToolTip": "Animal.Data\\Animal.Data.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-24T02:44:07.725Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Animal.Domain.csproj",
+              "DocumentMoniker": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
+              "RelativeDocumentMoniker": "Animal.Domain\\Animal.Domain.csproj",
+              "ToolTip": "C:\\Users\\csbco\\Downloads\\New folder (9)\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
+              "RelativeToolTip": "Animal.Domain\\Animal.Domain.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2026-09-24T02:43:27.879Z",
+              "EditorCaption": ""
             }
           ]
         }
