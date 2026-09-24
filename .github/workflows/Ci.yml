@@ -29,10 +29,13 @@ jobs:
       - name: Run tests
         run: dotnet test --no-build --configuration Release --verbosity normal
 
-      # Checks that your EF Core migrations compile and generate valid SQL.
-      # This does NOT connect to a database, so no SQL Server is needed in CI.
-      - name: Install EF Core tools
-        run: dotnet tool install --global dotnet-ef --version 8.*
-
+      # Run migration verification only when EF Core packages are present.
       - name: Verify EF Core migrations
-        run: dotnet ef migrations script --idempotent --configuration Release --output migrations.sql
+        run: |
+          if grep -Rqs "Microsoft.EntityFrameworkCore" . --include="*.csproj"; then
+            dotnet tool install --global dotnet-ef --version 8.*
+            export PATH="$PATH:$HOME/.dotnet/tools"
+            dotnet ef migrations script --idempotent --configuration Release --output migrations.sql --project Animal.Data/Animal.Data.csproj --startup-project Animal.API/Animal.API.csproj
+          else
+            echo "No EF Core package references found; skipping migration verification."
+          fi
