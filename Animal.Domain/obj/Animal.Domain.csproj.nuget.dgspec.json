@@ -1,25 +1,28 @@
 {
   "format": 1,
   "restore": {
-    "/home/runner/work/Team-5-Web-Programming/Team-5-Web-Programming/Animal.Domain/Animal.Domain.csproj": {}
+    "C:\\Users\\Darcy\\source\\repos\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj": {}
   },
   "projects": {
-    "/home/runner/work/Team-5-Web-Programming/Team-5-Web-Programming/Animal.Domain/Animal.Domain.csproj": {
+    "C:\\Users\\Darcy\\source\\repos\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/runner/work/Team-5-Web-Programming/Team-5-Web-Programming/Animal.Domain/Animal.Domain.csproj",
+        "projectUniqueName": "C:\\Users\\Darcy\\source\\repos\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
         "projectName": "Animal.Domain",
-        "projectPath": "/home/runner/work/Team-5-Web-Programming/Team-5-Web-Programming/Animal.Domain/Animal.Domain.csproj",
-        "packagesPath": "/home/runner/.nuget/packages/",
-        "outputPath": "/home/runner/work/Team-5-Web-Programming/Team-5-Web-Programming/Animal.Domain/obj/",
+        "projectPath": "C:\\Users\\Darcy\\source\\repos\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
+        "packagesPath": "C:\\Users\\Darcy\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Darcy\\source\\repos\\Team-5-Web-Programming\\Animal.Domain\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/runner/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Darcy\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
         ],
         "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -61,7 +64,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/10.0.400/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
