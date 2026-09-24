@@ -1,5 +1,5 @@
 <Solution>
-  <Project Path="Animal.API/Animal.API.csproj" />
-  <Project Path="Animal.Data/Animal.Data.csproj" Id="50af19a0-35f9-4904-8367-ab5c285e7b28" />
-  <Project Path="Animal.Domain/Animal.Domain.csproj" Id="3da46cf6-bacd-4cdf-93cc-0e9be8f87274" />
+  <Project Path="src/Animal.API/Animal.API.csproj" />
+  <Project Path="src/Animal.Data/Animal.Data.csproj" Id="50af19a0-35f9-4904-8367-ab5c285e7b28" />
+  <Project Path="src/Animal.Domain/Animal.Domain.csproj" Id="3da46cf6-bacd-4cdf-93cc-0e9be8f87274" />
 </Solution>
