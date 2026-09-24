@@ -1,6 +1,40 @@
-﻿/Animal.Domain/Models/Shelter.cs
+# Visual Studio / Rider
 .vs/
-[Bb]in/
-[Oo]bj/
+.idea/
 *.user
 *.suo
+*.userosscache
+*.sln.docstates
+
+# Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Tests / coverage
+[Tt]est[Rr]esult*/
+coverage*.json
+coverage*.xml
+*.coverage
+
+# EF Core generated script from CI
+migrations.sql
+
+# Local secrets and databases
+appsettings.*.local.json
+*.db
+*.db-shm
+*.db-wal
+
+# OS junk
+.DS_Store
+Thumbs.db

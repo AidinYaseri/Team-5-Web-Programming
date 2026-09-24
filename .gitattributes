@@ -1,0 +1,13 @@
+# Normalize line endings so Windows and Mac/Linux teammates don't get whole-file diffs
+* text=auto
+
+*.cs      text diff=csharp
+*.csproj  text
+*.slnx    text
+*.json    text
+*.md      text
+*.yml     text
+
+*.png     binary
+*.jpg     binary
+*.drawio  binary
