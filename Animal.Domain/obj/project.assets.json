@@ -8,31 +8,30 @@
     "net10.0": []
   },
   "packageFolders": {
-    "C:\\Users\\csbco\\.nuget\\packages\\": {},
+    "C:\\Users\\aidin\\.nuget\\packages\\": {},
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\csbco\\Documents\\Fall2026\\Security\\Theory\\New folder\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
+      "projectUniqueName": "C:\\Users\\aidin\\OneDrive\\Documents\\OneDrive - John Abbott College\\5th Semester\\Web Programming lll\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
       "projectName": "Animal.Domain",
-      "projectPath": "C:\\Users\\csbco\\Documents\\Fall2026\\Security\\Theory\\New folder\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
-      "packagesPath": "C:\\Users\\csbco\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\csbco\\Documents\\Fall2026\\Security\\Theory\\New folder\\Team-5-Web-Programming\\Animal.Domain\\obj\\",
+      "projectPath": "C:\\Users\\aidin\\OneDrive\\Documents\\OneDrive - John Abbott College\\5th Semester\\Web Programming lll\\Team-5-Web-Programming\\Animal.Domain\\Animal.Domain.csproj",
+      "packagesPath": "C:\\Users\\aidin\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\aidin\\OneDrive\\Documents\\OneDrive - John Abbott College\\5th Semester\\Web Programming lll\\Team-5-Web-Programming\\Animal.Domain\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
       ],
       "configFilePaths": [
-        "C:\\Users\\csbco\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\aidin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
       ],
       "originalTargetFrameworks": [
         "net10.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -74,7 +73,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.401/PortableRuntimeIdentifierGraph.json",
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.400/PortableRuntimeIdentifierGraph.json",
         "packagesToPrune": {
           "Microsoft.CSharp": "(,4.7.32767]",
           "Microsoft.VisualBasic": "(,10.4.32767]",
