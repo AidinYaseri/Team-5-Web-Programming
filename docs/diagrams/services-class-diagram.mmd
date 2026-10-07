@@ -1,0 +1,53 @@
+classDiagram
+    direction LR
+    class IPetService {
+        <<interface>>
+        +GetPet(id) Pet
+        +GetPets() List~Pet~
+        +GetAvailablePets() List~Pet~
+        +CreatePet(pet) Pet
+        +UpdatePet(pet)
+        +DeletePet(id)
+    }
+    class IShelterService {
+        <<interface>>
+        +GetShelter(id) Shelter
+        +GetShelters() List~Shelter~
+        +CreateShelter(shelter) Shelter
+        +UpdateShelter(shelter)
+        +DeleteShelter(id)
+    }
+    class IUserService {
+        <<interface>>
+        +GetUser(id) User
+        +GetUsers() List~User~
+        +CreateUser(user) User
+        +UpdateUser(user)
+        +DeleteUser(id)
+    }
+    class IAdoptionService {
+        <<interface>>
+        +GetApplication(id) AdoptionApplication
+        +GetApplications() List~AdoptionApplication~
+        +CreateApplication(application) AdoptionApplication
+        +ApproveApplication(id)
+        +RejectApplication(id)
+    }
+    class IAppointmentService {
+        <<interface>>
+        +GetAppointment(id) Appointment
+        +GetAppointments() List~Appointment~
+        +CreateAppointment(appointment) Appointment
+        +UpdateAppointment(appointment)
+        +CancelAppointment(id)
+    }
+    class INotificationService {
+        <<interface>>
+        +GetNotification(id) Notification
+        +GetNotifications() List~Notification~
+        +CreateNotification(notification) Notification
+        +MarkAsRead(id)
+    }
+    IAdoptionService ..> IPetService : uses
+    IAdoptionService ..> INotificationService : uses
+    IAppointmentService ..> INotificationService : uses

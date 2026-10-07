@@ -20,25 +20,25 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
-          # Match this to the <TargetFramework> in your .csproj (net8.0 -> 8.0.x, net9.0 -> 9.0.x)
-          dotnet-version: 8.0.x
+          # Must match <TargetFramework> in the .csproj files (net10.0)
+          dotnet-version: 10.0.x
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Team-5-Web-Programming.slnx
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build Team-5-Web-Programming.slnx --no-restore --configuration Release
 
       - name: Run tests
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test Team-5-Web-Programming.slnx --no-build --configuration Release --verbosity normal
 
       # Run migration verification only when EF Core packages are present.
       - name: Verify EF Core migrations
         run: |
-          if grep -Rqs "Microsoft.EntityFrameworkCore" . --include="*.csproj"; then
-            dotnet tool install --global dotnet-ef --version 8.*
+          if grep -Rqs "Microsoft.EntityFrameworkCore" src --include="*.csproj"; then
+            dotnet tool install --global dotnet-ef --version 10.*
             export PATH="$PATH:$HOME/.dotnet/tools"
-            dotnet ef migrations script --idempotent --configuration Release --output migrations.sql --project Animal.Data/Animal.Data.csproj --startup-project Animal.API/Animal.API.csproj
+            dotnet ef migrations script --idempotent --configuration Release --output migrations.sql --project src/Animal.Data/Animal.Data.csproj --startup-project src/Animal.API/Animal.API.csproj
           else
             echo "No EF Core package references found; skipping migration verification."
           fi

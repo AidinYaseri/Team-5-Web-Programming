@@ -1,0 +1,43 @@
+flowchart TB
+    Client(["Client<br/>(Swagger, .http file, front-end)"])
+
+    subgraph API["Animal.API  (Web API layer)"]
+        direction LR
+        PetsC[PetsController]
+        SheltersC[SheltersController]
+        UsersC[UsersController]
+        AdoptionsC[AdoptionsController]
+        AppointmentsC[AppointmentsController]
+        NotificationsC[NotificationsController]
+    end
+
+    subgraph DOMAIN["Animal.Domain  (models + service interfaces)"]
+        direction LR
+        PetS[IPetService]
+        ShelterS[IShelterService]
+        UserS[IUserService]
+        AdoptionS[IAdoptionService]
+        AppointmentS[IAppointmentService]
+        NotificationS[INotificationService]
+    end
+
+    subgraph DATA["Animal.Data  (EF Core)"]
+        direction LR
+        Repos["Repositories"]
+        Ctx["AnimalDbContext<br/>Configurations / Migrations / SeedData"]
+    end
+
+    DB[("SQL Server")]
+
+    Client -->|HTTP / JSON| API
+
+    PetsC --> PetS
+    SheltersC --> ShelterS
+    UsersC --> UserS
+    AdoptionsC --> AdoptionS
+    AppointmentsC --> AppointmentS
+    NotificationsC --> NotificationS
+
+    DOMAIN -->|implemented using| DATA
+    Repos --> Ctx
+    DATA -->|EF Core| DB
