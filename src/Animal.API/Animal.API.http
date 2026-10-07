@@ -1,6 +1,19 @@
 @Animal.API_HostAddress = http://localhost:5015
 
-GET {{Animal.API_HostAddress}}/weatherforecast/
+### All pets
+GET {{Animal.API_HostAddress}}/api/pets
+Accept: application/json
+
+### Available cats
+GET {{Animal.API_HostAddress}}/api/pets?species=cat&availableOnly=true
+Accept: application/json
+
+### Dogs 5 years old or younger
+GET {{Animal.API_HostAddress}}/api/pets?species=dog&maxAge=5
+Accept: application/json
+
+### Invalid age, should return 400
+GET {{Animal.API_HostAddress}}/api/pets?maxAge=-1
 Accept: application/json
 
 ###
