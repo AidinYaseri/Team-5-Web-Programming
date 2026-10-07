@@ -17,6 +17,9 @@ docs/diagrams/                  .mmd sources + .png exports (service, class, dat
 src/Animal.API/                 Web layer: Controllers/, Contracts/ (DTOs), Program.cs, appsettings*.json, launchSettings.json, Animal.API.http
 src/Animal.Domain/              Models/ (entities) and Services/ (I*Service interfaces); no dependency on other projects
 src/Animal.Data/                EF Core: Context/, Configurations/, Migrations/, SeedData/, Repositories/
+tests/                          xUnit test projects (Animal.Data.Tests, Animal.API.Tests)
+.github/prompts/                Reusable Copilot prompt files (prime an issue, write a plan, review a PR)
+.vscode/mcp.json                GitHub MCP server config for Copilot Agent mode
 Team-5-Web-Programming.slnx     Solution file
 README.md                       Architecture, diagrams, getting started, team conventions
 ```
@@ -74,7 +77,8 @@ dotnet ef database update --project src/Animal.Data --startup-project src/Animal
 dotnet ef migrations script --idempotent --configuration Release --project src/Animal.Data/Animal.Data.csproj --startup-project src/Animal.API/Animal.API.csproj
 ```
 
-- There are no test projects yet. New tests go in `tests/<Project>.Tests/` (xUnit preferred) and are added to the `.slnx`. New services and controller logic should ship with tests.
+- Tests live in `tests/<Project>.Tests/` (xUnit) and are listed in the `.slnx`. Service logic gets unit tests in `Animal.Data.Tests`. Endpoints get integration tests in `Animal.API.Tests` using `WebApplicationFactory<Program>`, with `ConfigureTestServices` to swap in known fake data. Keep at least one test that uses the real `Program.cs` registrations so DI mistakes are caught.
+- New services and controller logic must ship with tests.
 - The CI workflow (`.github/workflows/Ci.yml`) runs on pushes and PRs to `main` and must pass. The .NET version in CI must match `<TargetFramework>` in the `.csproj` files.
 - Use `src/Animal.API/Animal.API.http` for manual endpoint checks.
 
@@ -101,3 +105,11 @@ Before considering a change done:
 7. Diagrams and README are updated if services, models or structure changed.
 8. Work is on a branch off `main` and goes through a pull request. CI is green and at least one teammate has reviewed it before merging.
 9. The diff contains only the intended changes (no `bin/`, `obj/`, `.vs/` or `*.user` files).
+
+## 7. AI workflow (GitHub Copilot + MCP)
+
+- Copilot Agent mode connects to GitHub through the MCP server in `.vscode/mcp.json`, so it can read, search and create issues and PRs in this repo.
+- Every change starts from a GitHub issue. Search existing issues and code first so the new issue doesn't duplicate or conflict with other work.
+- Follow Research, Plan, Implement, Validate. Use `.github/prompts/prime-issue.prompt.md` to research and restate the issue, then `.github/prompts/create-plan.prompt.md` in a fresh session to write the plan. Implement one plan step at a time and check in after each one. Don't accept one big unreviewed change.
+- Before opening a PR, run the build and tests from section 4. After opening it, run `.github/prompts/review-pr.prompt.md` and record each finding as fixed or deferred in the PR.
+- Milestone notes (issue, plan, test evidence, review record, reflection) go in `docs/milestone-2/`.
