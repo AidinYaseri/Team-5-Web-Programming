@@ -5,13 +5,15 @@ Owner: Aiden
 ## Prompt used to open the PR (Copilot Agent mode, GitHub MCP)
 
 ```
-Open a pull request in AidinYaseri/Team-5-Web-Programming from branch <feature-branch> into main.
+Open a pull request in AidinYaseri/Team-5-Web-Programming from branch Copilot_instructions into main.
 Title: "Add species, age and availability filters to GET /api/pets"
 Use the "PR description" section of docs/milestone-2/step8-pr-review.md as the body,
 link it to issue #7, and request a review from the rest of Team 5.
 ```
 
-PR link: <!-- paste the PR URL here once it's open -->
+PR link: [#8](https://github.com/AidinYaseri/Team-5-Web-Programming/pull/8), `Copilot_instructions` into `main`, 14 commits. CI check passed. Merged by Chloe as `f23a44c`.
+
+**What didn't go to plan:** the PR was opened with no description (the body below never got pasted in), it wasn't linked to #7 so #7 didn't close on merge, and it was merged before anyone (or Copilot) left a review on GitHub. Findings 1 to 8 below come from our own review during Step 7, not from a review on the PR. See "Still to do" at the bottom.
 
 ## PR description
 
@@ -24,7 +26,7 @@ PR link: <!-- paste the PR URL here once it's open -->
 > - `InMemoryPetService` in `Animal.Data/Services` implements `IPetService` with fake seed data (`Animal.Data/SeedData/PetSeedData.cs`). It's temporary until `AnimalDbContext` exists. `GetAvailablePets` now reuses `SearchPets`.
 > - New `PetsController` with `GET /api/pets?species=&maxAge=&availableOnly=`. Input binds to the `PetSearchQuery` DTO (`species` max 50 chars, `maxAge` 0 to 100). Output is the `PetResponse` DTO, never the entity. Bad input returns 400 `ValidationProblem`.
 > - `Program.cs` registers the service through a factory (see review finding 1).
-> - New test projects `tests/Animal.Data.Tests` (19 cases) and `tests/Animal.API.Tests` (11 cases), added to the solution.
+> - New test projects `tests/Animal.Data.Tests` (19 cases) and `tests/Animal.API.Tests` (16 cases), added to the solution.
 > - `Animal.API.http`, the README class diagram and `services-class-diagram.mmd` updated.
 >
 > **Behaviour**
@@ -63,10 +65,17 @@ Findings 1 to 8 come from validation (Step 7) and a manual review of the diff ag
 | 5. No secrets or real data | Yes. Seed and test pets are made up |
 | 6. Validation, status codes, authorization | Validation and 200/400 yes. Authorization deferred (finding 6) |
 | 7. Diagrams and README updated | Yes (finding 2) |
-| 8. Branch and PR, CI green, teammate review | <!-- fill in once CI runs and a teammate approves --> |
+| 8. Branch and PR, CI green, teammate review | Branch and PR yes (#8), CI green. No review was left on GitHub before Chloe merged it |
 | 9. Only intended files in the diff | Yes. No `bin/`, `obj/`, `.vs/` or `*.user` files |
 
 ## Follow-up issues to open
 
 - Make the service interfaces async with `CancellationToken` (finding 4).
 - Add `[AllowAnonymous]` to `GET /api/pets` when authentication is added (finding 6).
+
+## Still to do after the merge
+
+- Add the PR description above to #8 (it can still be edited after merging).
+- Run `.github/prompts/review-pr.prompt.md` on #8 and add its findings as rows 9 and up.
+- Close #7 with a comment pointing to #8.
+- Open the two follow-up issues above.
