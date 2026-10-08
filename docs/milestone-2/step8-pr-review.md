@@ -65,7 +65,7 @@ Findings 1 to 8 come from validation (Step 7) and a manual review of the diff ag
 | 5. No secrets or real data | Yes. Seed and test pets are made up |
 | 6. Validation, status codes, authorization | Validation and 200/400 yes. Authorization deferred (finding 6) |
 | 7. Diagrams and README updated | Yes (finding 2) |
-| 8. Branch and PR, CI green, teammate review | Branch and PR yes (#8), CI green. No review was left on GitHub before Chloe merged it |
+| 8. Branch and PR, CI green, teammate review | Branch and PR yes (#8), CI green. No review before the merge. Copilot reviewed it afterwards (findings 9 to 13) |
 | 9. Only intended files in the diff | Yes. No `bin/`, `obj/`, `.vs/` or `*.user` files |
 
 ## Follow-up issues to open
@@ -73,9 +73,26 @@ Findings 1 to 8 come from validation (Step 7) and a manual review of the diff ag
 - Make the service interfaces async with `CancellationToken` (finding 4).
 - Add `[AllowAnonymous]` to `GET /api/pets` when authentication is added (finding 6).
 
-## Still to do after the merge
+## Fixing it after the merge
 
-- Add the PR description above to #8 (it can still be edited after merging).
-- Run `.github/prompts/review-pr.prompt.md` on #8 and add its findings as rows 9 and up.
-- Close #7 with a comment pointing to #8.
-- Open the two follow-up issues above.
+We asked Copilot (GitHub MCP) to clean up after the merge:
+
+- PR #8 description updated with the text above.
+- Issue #7 closed with ["Done in #8."](https://github.com/AidinYaseri/Team-5-Web-Programming/issues/7#issuecomment-6064400146)
+- Follow-up issues created: [#9 Make service interfaces async with CancellationToken](https://github.com/AidinYaseri/Team-5-Web-Programming/issues/9) and [#10 Add [AllowAnonymous] to GET /api/pets when authentication is added](https://github.com/AidinYaseri/Team-5-Web-Programming/issues/10).
+
+We also asked it to run `review-pr` on #8. Instead of reviewing the diff, it requested a Copilot code review job, found none, and just copied findings 1 to 8 back from the PR description. That isn't a review, so we asked again and told it to read the diff itself and only report new findings, numbered from 9.
+
+## Copilot's review of #8 (findings 9 to 13)
+
+It read every changed file under `src/` and `tests/` and found no new layer violations, secrets, stale docs or build output in the diff. Its new findings, with what we decided:
+
+| # | Severity (Copilot) | File | Finding | Outcome |
+|---|---|---|---|---|
+| 9 | High | `src/Animal.Data/SeedData/PetSeedData.cs` | Says `=> [ new Pet {...}, ... ]` is "JavaScript-style" and won't compile. | **Wrong, no change.** That's a C# 12 collection expression. The project targets .NET 10, `dotnet build` has 0 errors and CI on #8 passed. |
+| 10 | High | Both test files | Same claim for `Assert.Equal([1, 2, 3], ids)` and `new InMemoryPetService([ ... ])`. | **Wrong, no change.** Same reason. All 35 tests compile and pass. |
+| 11 | Medium | `PetsEndpointTests.cs` | Use typed `new[] { ... }` so xUnit picks the right `Assert.Equal` overload. | **No change.** Follows from finding 10. The asserts already compare sequences, which is why the tests can fail (they did in the Step 7 mutation check). |
+| 12 | Low | `PetSearchQuery.cs` | `AvailableOnly` is `bool`, so it can't tell "not sent" from "false". | **No change.** That's on purpose: issue #7 says default false, and `GetPets_AvailableOnlyFalse_EqualsNoFilter` tests it. |
+| 13 | Low | `InMemoryPetService.cs` | Species is trimmed, not a bug, maybe document it. | **No change.** Copilot said itself it isn't a bug. The behaviour is in the issue and the PR description. |
+
+So the review gave us nothing we had to fix. Its two "High" findings were false: it didn't know the newer C# syntax and didn't check the build or CI result before calling it a compile error. If we had applied its suggested patch, we would have rewritten working code across three files for nothing.
