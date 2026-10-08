@@ -23,7 +23,7 @@ The biggest problem was a bug that every test missed. The DI registration in `Pr
 
 The class diagram and the `.http` file were also left out of date at first, even though our rules say to update them. And the new method is synchronous even though our own rules say I/O should be async.
 
-Aiden: we didn't get the PR review we planned. PR #8 was opened without the description and merged before anyone ran the review prompt or left a review on GitHub. So the review findings in step 8 come from our own checks in step 7, not from a review on the PR. The process only works if someone actually stops at the PR, and we skipped that.
+Aiden: the PR review was the weakest part. PR #8 was opened without the description and merged before anyone reviewed it, so we had Copilot review it afterwards. The first time it just copied our own findings table back. The second time it really read the diff, but its two "High" findings said our C# 12 collection expressions (`[1, 2, 3]`) were "JavaScript-style" and wouldn't compile. The build and CI had already passed, so they were false. Nothing it found needed a fix. The review only helped because we checked every finding against the build instead of trusting it, and we should have stopped at the PR and reviewed before merging.
 
 ## What still needed a human
 
