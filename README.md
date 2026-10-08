@@ -80,6 +80,7 @@ classDiagram
         +GetPet(id) Pet
         +GetPets() List~Pet~
         +GetAvailablePets() List~Pet~
+        +SearchPets(criteria) List~Pet~
         +CreatePet(pet) Pet
         +UpdatePet(pet)
         +DeletePet(id)
