@@ -1,6 +1,6 @@
 # Implementation plan: Filter pets by species, age and availability
 
-Issue: #<issue>
+Issue: #7
 Owner: Darcy
 Generated with: `.github/prompts/create-plan.prompt.md`, in a **fresh** Copilot session (not the priming one), then reviewed and edited.
 
@@ -56,7 +56,17 @@ Add an optional filter to the pet list. `IPetService` gets a `SearchPets` method
 
 ## What we changed from Copilot's plan
 
-<!-- Fill in after running the prompt. Examples of things worth correcting:
-- It wanted to filter inside the controller with LINQ. Moved that to the service.
-- It forgot the docs step or the .http file.
-- It put everything in one giant step. Split it so each step can be checked. -->
+Copilot's raw plan is saved as [implementation-plan-copilot.md](implementation-plan-copilot.md). We gave it the team's decisions from step 4 in the prompt, so the file list and shapes were already right. What we still had to fix:
+
+| Copilot's plan | What we changed | Why |
+|---|---|---|
+| No Verification section, even though the prompt file asks for one | Added the Verification table above | Each step needs a check we can run before moving on. |
+| Step 6 says the controller returns DTOs "sorted by Id ascending" | Sorting stays in `InMemoryPetService.SearchPets` | Sorting in the controller is logic in the controller. The service already returns them in order. |
+| Seed data inside `InMemoryPetService` | Separate `PetSeedData` class | Tests can build the service with their own pets. |
+| `GetAvailablePets` implemented on its own | `GetAvailablePets` calls `SearchPets` with `AvailableOnly = true` | Same logic written once, and it's what we told it in step 4. |
+| Step 7 does DI, the `.http` file, the diagram and the README all at once | Split into Wiring and Docs | Small steps are easier to check. |
+| All tests at the very end | Unit tests right after the Data step, endpoint tests after the controller | Matches R-PIV, each step gets validated. |
+| Risks didn't mention DI picking the wrong constructor | Added a manual check in Verification step 5 (`GET /api/pets` must not return `[]`) | That's the bug we actually hit, see step 6. |
+| "Step 1" was saving the plan, and it marked it done and offered to start coding right away | Ignored, we stopped after the plan | The prompt file says stop so the plan can be reviewed. |
+
+What we kept: the file list, the Domain to Data to API order, singleton registration, the risk about changing `IPetService`, and the open question about who regenerates the PNG (answer: we do, with mermaid-cli, in the same commit).
