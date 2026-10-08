@@ -59,6 +59,15 @@ namespace Animal.API.Tests
         }
 
         [Fact]
+        public async Task GetPets_BySpecies_UppercaseIsEquivalent()
+        {
+            var lower = await GetIdsAsync("/api/pets?species=dog");
+            var upper = await GetIdsAsync("/api/pets?species=DOG");
+
+            Assert.Equal(lower, upper);
+        }
+
+        [Fact]
         public async Task GetPets_WithAllFilters_ReturnsOnlyPetsMatchingEveryFilter()
         {
             var ids = await GetIdsAsync("/api/pets?species=Dog&maxAge=5&availableOnly=true");
@@ -67,9 +76,27 @@ namespace Animal.API.Tests
         }
 
         [Fact]
+        public async Task GetPets_SpeciesExactlyFiftyCharacters_ReturnsOk()
+        {
+            var fifty = new string('a', 50);
+            var ids = await GetIdsAsync($"/api/pets?species={fifty}");
+
+            // GetIdsAsync already checks for 200, so this proves the length is allowed. No pet has that species.
+            Assert.Empty(ids);
+        }
+
+        [Fact]
         public async Task GetPets_WhenNothingMatches_ReturnsEmptyArray()
         {
             Assert.Empty(await GetIdsAsync("/api/pets?species=parrot"));
+        }
+
+        [Fact]
+        public async Task GetPets_MaxAge100_ReturnsAllPets()
+        {
+            var ids = await GetIdsAsync("/api/pets?maxAge=100");
+
+            Assert.Equal([1, 2, 3], ids);
         }
 
         [Fact]
@@ -85,6 +112,7 @@ namespace Animal.API.Tests
         [InlineData("/api/pets?maxAge=-1")]
         [InlineData("/api/pets?maxAge=101")]
         [InlineData("/api/pets?maxAge=abc")]
+        [InlineData("/api/pets?maxAge=3.5")]
         [InlineData("/api/pets?availableOnly=maybe")]
         public async Task GetPets_WithInvalidQuery_ReturnsValidationProblem(string url)
         {
@@ -103,6 +131,15 @@ namespace Animal.API.Tests
             var response = await _client.GetAsync("/api/pets?species=" + new string('a', 51));
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetPets_AvailableOnlyFalse_EqualsNoFilter()
+        {
+            var none = await GetIdsAsync("/api/pets");
+            var withFalse = await GetIdsAsync("/api/pets?availableOnly=false");
+
+            Assert.Equal(none, withFalse);
         }
     }
 }

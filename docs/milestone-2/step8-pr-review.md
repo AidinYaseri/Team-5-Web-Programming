@@ -8,7 +8,7 @@ Owner: Aiden
 Open a pull request in AidinYaseri/Team-5-Web-Programming from branch <feature-branch> into main.
 Title: "Add species, age and availability filters to GET /api/pets"
 Use the "PR description" section of docs/milestone-2/step8-pr-review.md as the body,
-link it to issue #<issue>, and request a review from the rest of Team 5.
+link it to issue #7, and request a review from the rest of Team 5.
 ```
 
 PR link: <!-- paste the PR URL here once it's open -->
@@ -17,7 +17,7 @@ PR link: <!-- paste the PR URL here once it's open -->
 
 > **Add species, age and availability filters to GET /api/pets**
 >
-> Closes #<issue>
+> Closes #7
 >
 > **What changed**
 > - `IPetService` gets `SearchPets(PetSearchCriteria)`. The new `PetSearchCriteria` model holds the optional filters (`Species`, `MaxAge`, `AvailableOnly`).
@@ -32,7 +32,7 @@ PR link: <!-- paste the PR URL here once it's open -->
 > - `maxAge` is inclusive. Filters combine with AND. No filters returns every pet. No match returns `[]`.
 >
 > **How it was tested**
-> `dotnet build` (0 errors, no new warnings) and `dotnet test` (30/30 passing). Manual checks with `Animal.API.http`. Details in `docs/milestone-2/step7-test-evidence.md`.
+> `dotnet build` (0 errors, no new warnings) and `dotnet test` (35/35 passing). Manual checks with `Animal.API.http`. Details in `docs/milestone-2/step7-test-evidence.md`.
 >
 > **Out of scope**
 > Paging, sorting, partial name search, EF Core persistence, authentication.
@@ -57,7 +57,7 @@ Findings 1 to 8 come from validation (Step 7) and a manual review of the diff ag
 | Item | Status |
 |---|---|
 | 1. Build succeeds, no new warnings | Yes (13 old `CS8618` warnings in the models, none new) |
-| 2. Tests pass, new tests for new behaviour | Yes, 30/30 |
+| 2. Tests pass, new tests for new behaviour | Yes, 35/35 |
 | 3. EF migration if models changed | Not needed. No EF Core yet, and `PetSearchCriteria` isn't an entity |
 | 4. Layer boundaries | Yes. Domain references nothing, the controller only maps and calls the service, DTOs in and out |
 | 5. No secrets or real data | Yes. Seed and test pets are made up |

@@ -33,7 +33,7 @@ Before this milestone the solution had no tests at all. We added two xUnit proje
 | `GetAvailablePets_StillReturnsOnlyAvailablePets` | Regression: old method still works after being rewritten to use `SearchPets` |
 | `DefaultConstructor_LoadsSeedData` | Seed data loads |
 
-**`PetsEndpointTests` (10 test cases)** use `ConfigureTestServices` to swap in 3 known fake pets.
+**`PetsEndpointTests` (15 test cases, 10 before Copilot's coverage check plus 5 added from it)** use `ConfigureTestServices` to swap in 3 known fake pets.
 
 | Test | Checks |
 |---|---|
@@ -42,14 +42,60 @@ Before this milestone the solution had no tests at all. We added two xUnit proje
 | `GetPets_WithAllFilters_ReturnsOnlyPetsMatchingEveryFilter` | `?species=Dog&maxAge=5&availableOnly=true` |
 | `GetPets_WhenNothingMatches_ReturnsEmptyArray` | 200 with `[]` |
 | `GetPets_ReturnsDtoFieldsAsCamelCaseJson` | JSON uses the DTO with camelCase names |
-| `GetPets_WithInvalidQuery_ReturnsValidationProblem` (4 cases) | `maxAge=-1`, `maxAge=101`, `maxAge=abc`, `availableOnly=maybe` return 400 `application/problem+json` |
+| `GetPets_WithInvalidQuery_ReturnsValidationProblem` (5 cases) | `maxAge=-1`, `maxAge=101`, `maxAge=abc`, `maxAge=3.5`, `availableOnly=maybe` return 400 `application/problem+json` |
 | `GetPets_WithSpeciesLongerThan50Characters_ReturnsBadRequest` | `[StringLength(50)]` is enforced |
+| `GetPets_BySpecies_UppercaseIsEquivalent` (new) | `?species=DOG` gives the same pets as `?species=dog` through the real endpoint |
+| `GetPets_SpeciesExactlyFiftyCharacters_ReturnsOk` (new) | 50 characters is still allowed |
+| `GetPets_MaxAge100_ReturnsAllPets` (new) | `maxAge=100` is allowed |
+| `GetPets_AvailableOnlyFalse_EqualsNoFilter` (new) | Sending `false` is the same as leaving it out (fake data has one adopted pet, so this means something) |
 
 **`PetsStartupTests` (1 test case)** uses the real `Program.cs` with no overrides.
 
 | Test | Checks |
 |---|---|
 | `GetPets_WithRealServices_ReturnsSeedData` | Regression for the DI bug below: the real app returns the seed pets, not `[]` |
+
+## Coverage check with Copilot
+
+New chat, Agent mode, GPT-5 mini, GitHub MCP on:
+
+```
+Validate issue #7 on this branch. Follow .github/copilot-instructions.md.
+1. Run: dotnet build Team-5-Web-Programming.slnx -c Release, then dotnet test Team-5-Web-Programming.slnx --no-build -c Release. Show me the counts.
+2. Read issue #7 with the GitHub MCP tools and go through every acceptance criterion and validation rule. For each one, name the test in tests/ that covers it, or say it isn't covered.
+3. Look for edge cases the tests miss. Don't write any tests yet, just list them.
+```
+
+Copilot ran the build and tests (30/30) and mapped every acceptance criterion in #7 to a test. We checked the mapping against the test files and it was right. It found that the boundaries were only tested on the failing side (51 characters, `maxAge=101`) and that uppercase species was only tested at the service level, not through the endpoint.
+
+It listed 13 edge cases. What we did with them:
+
+| Edge case | Decision | Why |
+|---|---|---|
+| `?species=DOG` at the endpoint | Added | Acceptance criterion in #7 |
+| Species of exactly 50 characters | Added | Boundary of a rule in #7 |
+| `maxAge=100` | Added | Boundary of a rule in #7 |
+| `maxAge=3.5` | Added to the invalid theory | Has to be an int |
+| `availableOnly=false` | Added | Default is false, so it should match no filter |
+| Empty `availableOnly=`, repeated params, spaces inside species | Skipped | The issue doesn't say what should happen, so a test would be making up a rule |
+| Unknown extra params | Skipped | `[ApiController]` ignores them already, not part of #7 |
+| Turkish i casing, large data sets, concurrency, null fields | Skipped | Out of scope for an in-memory demo service |
+
+Then in the same chat:
+
+```
+Add only these endpoint tests to tests/Animal.API.Tests/PetsEndpointTests.cs, following the style already in that file (use the existing fake pets and helpers, [Theory]/[InlineData] where it fits):
+1. ?species=DOG returns the same ids as ?species=dog
+2. species of exactly 50 characters returns 200 (empty array is fine)
+3. ?maxAge=100 returns 200 with all pets
+4. ?maxAge=3.5 returns 400 application/problem+json (add it to the existing invalid-query theory)
+5. ?availableOnly=false returns the same ids as no query
+Don't change any code in src/. Then run dotnet build and dotnet test again and show me the counts and the diff.
+```
+
+Copilot added all 5 and reported 35/35. The diff it printed in chat was messy (it repeated the `[InlineData]` lines and dropped one test), so we checked the real file with `git diff`. The file was fine.
+
+**Our correction:** the 50 character test ended with `Assert.NotNull(ids)`, which can never fail because the helper already returns a non-null array. We changed it to `Assert.Empty(ids)` so it actually checks the response.
 
 ## Commands and results
 
@@ -61,7 +107,7 @@ dotnet build Team-5-Web-Programming.slnx --no-restore --configuration Release
 dotnet test Team-5-Web-Programming.slnx --no-build --configuration Release
 ```
 
-Result (.NET SDK 10.0.401):
+Result (.NET SDK 10.0.400, on Aiden's machine):
 
 ```
 Build succeeded.
@@ -69,7 +115,7 @@ Build succeeded.
     0 Error(s)
 
 Animal.Data.Tests  Total tests: 19   Passed: 19
-Animal.API.Tests   Total tests: 11   Passed: 11
+Animal.API.Tests   Total tests: 16   Passed: 16
 ```
 
 All 13 warnings are `CS8618` (non-nullable string properties) in the existing `Animal.Domain/Models` files. They were already there before this change. The change adds no new warnings.
@@ -118,5 +164,5 @@ The same requests are saved in `src/Animal.API/Animal.API.http`.
 
 ## Evidence still to add
 
-- [ ] Screenshot of Test Explorer (or terminal) showing 30/30 passing on your machine
+- [ ] Screenshot of Test Explorer (or terminal) showing 35/35 passing on your machine
 - [ ] Link to the green CI run on the PR
