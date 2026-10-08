@@ -29,11 +29,11 @@ This is GitHub's hosted (remote) MCP server. It signs in with your GitHub accoun
 4. Accept the GitHub sign-in prompt.
 5. Open Copilot Chat, switch the mode to **Agent**, and click the tools icon. The `github` tools (issues, pull requests, search, and so on) should be listed and checked.
 
-**Visual Studio 2022 (17.14 or newer)**
+**Visual Studio (2022 17.14 or newer, we used Visual Studio 2026)**
 
-1. Open `Team-5-Web-Programming.slnx`. Visual Studio also reads `.vscode/mcp.json` from the solution folder.
+1. Open `Team-5-Web-Programming.slnx`. Visual Studio reads `.mcp.json` from the solution folder, so we added a copy of the same config at the repo root.
 2. Open Copilot Chat, pick **Agent** mode, and click the tools icon.
-3. Enable the `github` server and sign in when asked.
+3. Under "Added", the `github` server shows up. If it says Off, click it, pick Restart or Configure, and sign in with GitHub. It should then show 49/49 tools.
 
 ## How we checked it works
 
@@ -47,11 +47,22 @@ Ran these prompts in Agent mode. Each one has to call a GitHub MCP tool, not jus
 
 ## Evidence
 
-- [ ] Screenshot: `github` server running in the MCP server list
-- [ ] Screenshot: Agent mode tool picker with the GitHub tools enabled
-- [ ] Screenshot: one of the test prompts above with the MCP tool call visible
+Before the fix, Copilot (GPT-5 mini, Agent mode) answered "I have no GitHub MCP tools available.":
+
+![Copilot with no MCP tools](screenshots/step1-no-tools-before.jpg)
+
+After turning the server on, the tool picker shows `github` with 49/49 tools:
+
+![Tool picker with github 49/49](screenshots/step1-tool-picker.jpg)
+
+Then we asked: `List the tools you can call right now that come from the GitHub MCP server. Don't run any of them. If you have no GitHub MCP tools, say so.` Copilot listed the GitHub tools, including `mcp_github_issue_write`, `mcp_github_list_issues`, `mcp_github_create_pull_request` and `mcp_github_request_copilot_review`, which are the ones we need for steps 2, 3 and 8:
+
+![Copilot listing the GitHub MCP tools](screenshots/step1-tools-list.jpg)
 
 ## Problems we hit
+
+- At first Copilot in Visual Studio said it had no GitHub MCP tools, and offered `gh` and curl commands instead. The `github` server was listed in the tool picker but it was Off with 0/49 tools. Restarting the server and signing in fixed it.
+- Visual Studio didn't seem to use `.vscode/mcp.json`, so we added `.mcp.json` at the repo root with the same content.
 
 - The tool call has to be approved the first time. Pick "Allow in this workspace" so later steps don't keep asking.
 - If the tools don't show up, check that Chat is in **Agent** mode. Ask mode can't use MCP tools.
