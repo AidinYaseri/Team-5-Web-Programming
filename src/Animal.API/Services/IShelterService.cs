@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 
-namespace Animal.Domain.Services
+namespace Animal.API.Services
 {
+    // Not implemented yet. The slice owner switches these to the DTOs in docs/milestone-3/api-contracts.md.
     public interface IShelterService
     {
-        Shelter GetShelter(int id);
-        List<Shelter> GetShelters();
-        Shelter CreateShelter(Shelter shelter);
-        void UpdateShelter(Shelter shelter);
-        void DeleteShelter(int id);
+        Task<Shelter> GetShelterAsync(int id, CancellationToken cancellationToken = default);
+        Task<List<Shelter>> GetSheltersAsync(CancellationToken cancellationToken = default);
+        Task<Shelter> CreateShelterAsync(Shelter shelter, CancellationToken cancellationToken = default);
+        Task UpdateShelterAsync(Shelter shelter, CancellationToken cancellationToken = default);
+        Task DeleteShelterAsync(int id, CancellationToken cancellationToken = default);
     }
 }

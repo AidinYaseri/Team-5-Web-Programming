@@ -1,76 +1,55 @@
 using Animal.Data.SeedData;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 using Animal.Domain.Services;
+using Animal.Domain.ValueObjects;
 
-namespace Animal.Data.Services
+namespace Animal.Data.Repositories
 {
-    // Temporary IPetService backed by a list. Swap for an EF Core implementation once AnimalDbContext exists.
-    public class InMemoryPetService : IPetService
+    // Temporary IPetRepository backed by a list. Replaced by an EF Core repository in WI-2.
+    public class InMemoryPetRepository : IPetRepository
     {
         private readonly List<Pet> _pets;
         private readonly object _lock = new();
 
-        public InMemoryPetService() : this(PetSeedData.GetPets())
+        public InMemoryPetRepository() : this(PetSeedData.GetPets())
         {
         }
 
-        public InMemoryPetService(IEnumerable<Pet> pets)
+        public InMemoryPetRepository(IEnumerable<Pet> pets)
         {
             _pets = pets.ToList();
         }
 
-        public Pet GetPet(int id)
+        public Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
             lock (_lock)
             {
-                return _pets.FirstOrDefault(p => p.Id == id)
-                    ?? throw new KeyNotFoundException($"Pet {id} was not found.");
+                return Task.FromResult(_pets.FirstOrDefault(p => p.Id == id));
             }
         }
 
-        public List<Pet> GetPets()
+        public Task<List<Pet>> GetAllAsync(CancellationToken cancellationToken = default)
         {
             lock (_lock)
             {
-                return _pets.OrderBy(p => p.Id).ToList();
+                return Task.FromResult(_pets.OrderBy(p => p.Id).ToList());
             }
         }
 
-        public List<Pet> GetAvailablePets()
-        {
-            return SearchPets(new PetSearchCriteria { AvailableOnly = true });
-        }
-
-        public List<Pet> SearchPets(PetSearchCriteria criteria)
+        public Task<List<Pet>> SearchAsync(PetSearchCriteria criteria, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(criteria);
 
-            var species = criteria.Species?.Trim();
-
             lock (_lock)
             {
-                IEnumerable<Pet> query = _pets;
-
-                if (!string.IsNullOrEmpty(species))
-                {
-                    query = query.Where(p => string.Equals(p.Species, species, StringComparison.OrdinalIgnoreCase));
-                }
-
-                if (criteria.MaxAge.HasValue)
-                {
-                    query = query.Where(p => p.Age <= criteria.MaxAge.Value);
-                }
-
-                if (criteria.AvailableOnly)
-                {
-                    query = query.Where(p => p.IsAvailable);
-                }
-
-                return query.OrderBy(p => p.Id).ToList();
+                return Task.FromResult(_pets
+                    .Where(p => PetRules.Matches(p, criteria))
+                    .OrderBy(p => p.Id)
+                    .ToList());
             }
         }
 
-        public Pet CreatePet(Pet pet)
+        public Task<Pet> AddAsync(Pet pet, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(pet);
 
@@ -78,11 +57,11 @@ namespace Animal.Data.Services
             {
                 pet.Id = _pets.Count == 0 ? 1 : _pets.Max(p => p.Id) + 1;
                 _pets.Add(pet);
-                return pet;
+                return Task.FromResult(pet);
             }
         }
 
-        public void UpdatePet(Pet pet)
+        public Task<bool> UpdateAsync(Pet pet, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(pet);
 
@@ -91,21 +70,19 @@ namespace Animal.Data.Services
                 var index = _pets.FindIndex(p => p.Id == pet.Id);
                 if (index < 0)
                 {
-                    throw new KeyNotFoundException($"Pet {pet.Id} was not found.");
+                    return Task.FromResult(false);
                 }
 
                 _pets[index] = pet;
+                return Task.FromResult(true);
             }
         }
 
-        public void DeletePet(int id)
+        public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
         {
             lock (_lock)
             {
-                if (_pets.RemoveAll(p => p.Id == id) == 0)
-                {
-                    throw new KeyNotFoundException($"Pet {id} was not found.");
-                }
+                return Task.FromResult(_pets.RemoveAll(p => p.Id == id) > 0);
             }
         }
     }

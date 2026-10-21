@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
-using Animal.Data.Services;
-using Animal.Domain.Models;
-using Animal.Domain.Services;
+using Animal.Data.Repositories;
+using Animal.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -17,12 +16,13 @@ namespace Animal.API.Tests
 
         public PetsEndpointTests(WebApplicationFactory<Program> factory)
         {
-            // Swap the real IPetService for one with known fake pets so the results don't depend on seed data.
+            // Swap the real IPetRepository for one with known fake pets so the results don't depend on seed data.
+            // The real PetService still runs, so these tests cover controller + service + repository.
             _client = factory.WithWebHostBuilder(builder =>
             {
                 builder.ConfigureTestServices(services =>
                 {
-                    services.AddSingleton<IPetService>(new InMemoryPetService(
+                    services.AddSingleton<IPetRepository>(new InMemoryPetRepository(
                     [
                         new Pet { Id = 1, Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 3, IsAvailable = true, ShelterId = 1 },
                         new Pet { Id = 2, Name = "Mochi", Species = "Cat", Breed = "Siamese", Age = 1, IsAvailable = true, ShelterId = 1 },

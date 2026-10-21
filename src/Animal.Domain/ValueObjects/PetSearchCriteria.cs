@@ -1,6 +1,6 @@
-namespace Animal.Domain.Models
+namespace Animal.Domain.ValueObjects
 {
-    // Optional filters for IPetService.SearchPets. A null or empty value means "don't filter on this".
+    // Optional filters for searching pets. A null or empty value means "don't filter on this".
     public class PetSearchCriteria
     {
         public string? Species { get; set; }

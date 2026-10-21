@@ -1,6 +1,6 @@
 using Animal.API.Contracts;
-using Animal.Domain.Models;
-using Animal.Domain.Services;
+using Animal.API.Services;
+using Animal.Domain.ValueObjects;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Animal.API.Controllers
@@ -20,7 +20,7 @@ namespace Animal.API.Controllers
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public ActionResult<IEnumerable<PetResponse>> GetPets([FromQuery] PetSearchQuery query)
+        public async Task<ActionResult<IEnumerable<PetResponse>>> GetPets([FromQuery] PetSearchQuery query, CancellationToken cancellationToken)
         {
             var criteria = new PetSearchCriteria
             {
@@ -29,8 +29,7 @@ namespace Animal.API.Controllers
                 AvailableOnly = query.AvailableOnly
             };
 
-            var pets = _petService.SearchPets(criteria);
-            return Ok(pets.Select(PetResponse.FromPet));
+            return Ok(await _petService.SearchPetsAsync(criteria, cancellationToken));
         }
     }
 }

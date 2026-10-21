@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 
-namespace Animal.Domain.Services
+namespace Animal.API.Services
 {
+    // Not implemented yet. The slice owner switches these to the DTOs in docs/milestone-3/api-contracts.md.
     public interface INotificationService
     {
-        Notification GetNotification(int id);
-        List<Notification> GetNotifications();
-        Notification CreateNotification(Notification notification);
-        void MarkAsRead(int id);
+        Task<Notification> GetNotificationAsync(int id, CancellationToken cancellationToken = default);
+        Task<List<Notification>> GetNotificationsAsync(CancellationToken cancellationToken = default);
+        Task<Notification> CreateNotificationAsync(Notification notification, CancellationToken cancellationToken = default);
+        Task MarkAsReadAsync(int id, CancellationToken cancellationToken = default);
     }
 }

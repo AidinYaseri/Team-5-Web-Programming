@@ -1,9 +1,10 @@
-using Animal.Data.Services;
-using Animal.Domain.Models;
+using Animal.Data.Repositories;
+using Animal.Domain.Entities;
+using Animal.Domain.ValueObjects;
 
 namespace Animal.Data.Tests
 {
-    public class InMemoryPetServiceTests
+    public class InMemoryPetRepositoryTests
     {
         // Fake pets so each test knows exactly what should come back.
         private static List<Pet> TestPets() =>
@@ -15,14 +16,14 @@ namespace Animal.Data.Tests
             new Pet { Id = 5, Name = "Luna", Species = "Cat", Breed = "Domestic Shorthair", Age = 9, IsAvailable = true, ShelterId = 1 }
         ];
 
-        private static InMemoryPetService CreateService() => new(TestPets());
+        private static InMemoryPetRepository CreateRepository() => new(TestPets());
 
         private static int[] Ids(List<Pet> pets) => pets.Select(p => p.Id).ToArray();
 
         [Fact]
-        public void SearchPets_WithNoFilters_ReturnsAllPetsOrderedById()
+        public async Task SearchAsync_WithNoFilters_ReturnsAllPetsOrderedById()
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria());
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria());
 
             Assert.Equal([1, 2, 3, 4, 5], Ids(result));
         }
@@ -32,9 +33,9 @@ namespace Animal.Data.Tests
         [InlineData("dog")]
         [InlineData("DOG")]
         [InlineData("  dog  ")]
-        public void SearchPets_BySpecies_IgnoresCaseAndSurroundingSpaces(string species)
+        public async Task SearchAsync_BySpecies_IgnoresCaseAndSurroundingSpaces(string species)
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { Species = species });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { Species = species });
 
             Assert.Equal([1, 3], Ids(result));
         }
@@ -43,114 +44,119 @@ namespace Animal.Data.Tests
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
-        public void SearchPets_WithBlankSpecies_DoesNotFilterBySpecies(string? species)
+        public async Task SearchAsync_WithBlankSpecies_DoesNotFilterBySpecies(string? species)
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { Species = species });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { Species = species });
 
             Assert.Equal(5, result.Count);
         }
 
         [Fact]
-        public void SearchPets_BySpecies_DoesNotMatchPartialNames()
+        public async Task SearchAsync_BySpecies_DoesNotMatchPartialNames()
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { Species = "Do" });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { Species = "Do" });
 
             Assert.Empty(result);
         }
 
         [Fact]
-        public void SearchPets_ByMaxAge_IncludesPetsExactlyThatAge()
+        public async Task SearchAsync_ByMaxAge_IncludesPetsExactlyThatAge()
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { MaxAge = 3 });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { MaxAge = 3 });
 
             Assert.Equal([1, 2, 4], Ids(result));
         }
 
         [Fact]
-        public void SearchPets_WithMaxAgeZero_ReturnsOnlyNewborns()
+        public async Task SearchAsync_WithMaxAgeZero_ReturnsOnlyNewborns()
         {
-            var service = new InMemoryPetService(
+            var repository = new InMemoryPetRepository(
             [
                 new Pet { Id = 1, Name = "Tiny", Species = "Cat", Breed = "Mixed", Age = 0, IsAvailable = true, ShelterId = 1 },
                 new Pet { Id = 2, Name = "Bean", Species = "Cat", Breed = "Mixed", Age = 1, IsAvailable = true, ShelterId = 1 }
             ]);
 
-            var result = service.SearchPets(new PetSearchCriteria { MaxAge = 0 });
+            var result = await repository.SearchAsync(new PetSearchCriteria { MaxAge = 0 });
 
             Assert.Equal([1], Ids(result));
         }
 
         [Fact]
-        public void SearchPets_AvailableOnly_SkipsAdoptedPets()
+        public async Task SearchAsync_AvailableOnly_SkipsAdoptedPets()
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { AvailableOnly = true });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { AvailableOnly = true });
 
             Assert.Equal([1, 2, 4, 5], Ids(result));
         }
 
         [Fact]
-        public void SearchPets_WithAllFilters_CombinesThemWithAnd()
+        public async Task SearchAsync_WithAllFilters_CombinesThemWithAnd()
         {
             var criteria = new PetSearchCriteria { Species = "dog", MaxAge = 10, AvailableOnly = true };
 
-            var result = CreateService().SearchPets(criteria);
+            var result = await CreateRepository().SearchAsync(criteria);
 
             // Rex is a dog under 10 but already adopted, so only Biscuit is left.
             Assert.Equal([1], Ids(result));
         }
 
         [Fact]
-        public void SearchPets_WhenNothingMatches_ReturnsEmptyList()
+        public async Task SearchAsync_WhenNothingMatches_ReturnsEmptyList()
         {
-            var result = CreateService().SearchPets(new PetSearchCriteria { Species = "Parrot" });
+            var result = await CreateRepository().SearchAsync(new PetSearchCriteria { Species = "Parrot" });
 
             Assert.NotNull(result);
             Assert.Empty(result);
         }
 
         [Fact]
-        public void SearchPets_WithNullCriteria_Throws()
+        public async Task SearchAsync_WithNullCriteria_Throws()
         {
-            Assert.Throws<ArgumentNullException>(() => CreateService().SearchPets(null!));
+            await Assert.ThrowsAsync<ArgumentNullException>(() => CreateRepository().SearchAsync(null!));
         }
 
         [Fact]
-        public void SearchPets_ReturnsNewList_SoCallersCannotChangeTheStore()
+        public async Task SearchAsync_ReturnsNewList_SoCallersCannotChangeTheStore()
         {
-            var service = CreateService();
+            var repository = CreateRepository();
 
-            service.SearchPets(new PetSearchCriteria()).Clear();
+            (await repository.SearchAsync(new PetSearchCriteria())).Clear();
 
-            Assert.Equal(5, service.GetPets().Count);
+            Assert.Equal(5, (await repository.GetAllAsync()).Count);
         }
 
         [Fact]
-        public void SearchPets_SeesPetsAddedWithCreatePet()
+        public async Task SearchAsync_SeesPetsAddedWithAddAsync()
         {
-            var service = CreateService();
-            service.CreatePet(new Pet { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, IsAvailable = true, ShelterId = 1 });
+            var repository = CreateRepository();
+            await repository.AddAsync(new Pet { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, IsAvailable = true, ShelterId = 1 });
 
-            var result = service.SearchPets(new PetSearchCriteria { Species = "rabbit" });
+            var result = await repository.SearchAsync(new PetSearchCriteria { Species = "rabbit" });
 
             Assert.Equal([4, 6], Ids(result));
         }
 
-        // Regression: GetAvailablePets now goes through SearchPets and must keep its old behaviour.
         [Fact]
-        public void GetAvailablePets_StillReturnsOnlyAvailablePets()
+        public async Task GetByIdAsync_WhenMissing_ReturnsNull()
         {
-            var result = CreateService().GetAvailablePets();
-
-            Assert.Equal([1, 2, 4, 5], Ids(result));
-            Assert.All(result, p => Assert.True(p.IsAvailable));
+            Assert.Null(await CreateRepository().GetByIdAsync(99));
         }
 
         [Fact]
-        public void DefaultConstructor_LoadsSeedData()
+        public async Task UpdateAsync_And_DeleteAsync_WhenMissing_ReturnFalse()
         {
-            var service = new InMemoryPetService();
+            var repository = CreateRepository();
 
-            Assert.NotEmpty(service.GetPets());
+            Assert.False(await repository.UpdateAsync(new Pet { Id = 99, Name = "Ghost", Species = "Cat" }));
+            Assert.False(await repository.DeleteAsync(99));
+        }
+
+        [Fact]
+        public async Task DefaultConstructor_LoadsSeedData()
+        {
+            var repository = new InMemoryPetRepository();
+
+            Assert.NotEmpty(await repository.GetAllAsync());
         }
     }
 }

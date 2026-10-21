@@ -13,9 +13,10 @@ Team-5-Web-Programming/
 ├── docs/
 │   └── diagrams/                 # service + database diagrams (.mmd sources and .png exports)
 ├── src/
-│   ├── Animal.API/               # Web API: Controllers, Contracts (DTOs), Program.cs
-│   ├── Animal.Domain/            # Models (entities) and Services (service interfaces)
-│   └── Animal.Data/              # EF Core: Context, Configurations, Migrations, SeedData, Repositories
+│   ├── Animal.API/               # Web API: Controllers, Contracts (DTOs), Services (application services), ErrorHandling, Program.cs
+│   ├── Animal.Domain/            # Entities, Enums, Exceptions, ValueObjects, Services (pure business rules)
+│   └── Animal.Data/              # Repositories, SeedData (EF Core Context, Configurations, Migrations in WI-2)
+├── tests/                        # Animal.Domain.Tests, Animal.Data.Tests, Animal.API.Tests
 ├── Team-5-Web-Programming.slnx   # solution file, open this in Visual Studio
 └── README.md
 ```

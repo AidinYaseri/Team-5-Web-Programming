@@ -14,7 +14,7 @@ namespace Animal.API.Tests
             _client = factory.CreateClient();
         }
 
-        // Regression: DI used to pick InMemoryPetService(IEnumerable<Pet>) and pass an empty list, so the API returned [].
+        // Regression: DI used to pick the in-memory store's IEnumerable<Pet> constructor and pass an empty list, so the API returned [].
         [Fact]
         public async Task GetPets_WithRealServices_ReturnsSeedData()
         {

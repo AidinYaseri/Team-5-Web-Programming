@@ -7,17 +7,17 @@
 - **Database:** SQL Server via EF Core (code-first migrations).
 - **API docs:** built-in OpenAPI (`AddOpenApi`/`MapOpenApi`), served at `/openapi/v1.json` in Development only.
 - **Target runtime:** cross-platform .NET 10 (developed on Windows/Visual Studio, CI on Ubuntu).
-- **Status:** early stage. Domain models and service interfaces exist. Controllers, DTOs, repositories, DbContext, migrations and service implementations are still to be written, so follow the architecture below when adding them.
+- **Status:** Milestone 3. The layers are in place and Pets works end to end with an in-memory repository. EF Core, auth, the frontend client and the other five slices are still to be written. Follow the architecture below and the endpoint contracts in `docs/milestone-3/api-contracts.md`.
 
 ## 2. Project layout
 
 ```
 .github/workflows/Ci.yml        CI: restore, build, test, EF migration script check
 docs/diagrams/                  .mmd sources + .png exports (service, class, database diagrams)
-src/Animal.API/                 Web layer: Controllers/, Contracts/ (DTOs), Program.cs, appsettings*.json, launchSettings.json, Animal.API.http
-src/Animal.Domain/              Models/ (entities) and Services/ (I*Service interfaces); no dependency on other projects
-src/Animal.Data/                EF Core: Context/, Configurations/, Migrations/, SeedData/, Repositories/
-tests/                          xUnit test projects (Animal.Data.Tests, Animal.API.Tests)
+src/Animal.API/                 Web layer: Controllers/, Contracts/ (DTOs), Services/ (I*Service + application services), ErrorHandling/, Program.cs, appsettings*.json, Animal.API.http
+src/Animal.Domain/              Entities/, Enums/, Exceptions/, ValueObjects/, Services/ (pure business rules); no dependency on other projects or packages
+src/Animal.Data/                Repositories/ (I*Repository + implementations), SeedData/; EF Core Context/, Configurations/, Migrations/ come in WI-2
+tests/                          xUnit test projects (Animal.Domain.Tests, Animal.Data.Tests, Animal.API.Tests)
 .github/prompts/                Reusable Copilot prompt files (prime an issue, write a plan, review a PR)
 .vscode/mcp.json                GitHub MCP server config for Copilot Agent mode
 Team-5-Web-Programming.slnx     Solution file
@@ -31,16 +31,17 @@ Key config: `src/Animal.API/appsettings.json` and `appsettings.Development.json`
 ## 3. Development rules
 
 **Architecture**
-- Layering: Controller → service interface (Domain) → repository/EF Core (Data) → SQL Server.
-- Controllers stay thin: bind and validate input, call a service, map the result to an HTTP response. No business logic and no `DbContext` in controllers.
-- Service interfaces live in `Animal.Domain/Services`. Implementations go in `Animal.Data` (or a dedicated project if one is added) and are registered in `Program.cs` through DI.
-- Entities live in `Animal.Domain/Models`. Don't return entities directly from endpoints. Use request/response DTOs in `Animal.API/Contracts`.
+- Layering: Controller → application service (`Animal.API/Services`) → repository (`Animal.Data/Repositories`) → SQL Server. Application services call pure rules in `Animal.Domain/Services` and map entities to DTOs.
+- Controllers stay thin: bind and validate input, call an application service, return the HTTP result. No business logic and no `DbContext` or repository in controllers.
+- Application service interfaces and implementations live in `Animal.API/Services`. Repository interfaces and implementations live in `Animal.Data/Repositories`. Register both in `Program.cs`.
+- Entities live in `Animal.Domain/Entities`. Don't return entities directly from endpoints. Use request/response DTOs in `Animal.API/Contracts`.
+- Errors: throw `EntityNotFoundException` (→ 404) or `BusinessRuleException` (→ 409) from `Animal.Domain/Exceptions`. `DomainExceptionHandler` turns them into ProblemDetails, so controllers don't catch them.
 - EF mapping goes in `IEntityTypeConfiguration<T>` classes in `Animal.Data/Configurations`, not in data annotations or a giant `OnModelCreating`.
 - Cross-service behaviour documented in the README: `IAdoptionService` uses `IPetService` and `INotificationService`. `IAppointmentService` uses `INotificationService`.
 - Keep `docs/diagrams/*.mmd`, the README diagram blocks and the PNGs in sync when services, models or relationships change.
 
 **Naming and style**
-- Namespaces match folders (e.g. `Animal.Domain.Models`). One public type per file, and the file name matches the type.
+- Namespaces match folders (e.g. `Animal.Domain.Entities`). One public type per file, and the file name matches the type.
 - PascalCase for types, methods and properties. `_camelCase` for private fields. Interfaces start with `I`. Async methods end in `Async` and accept a `CancellationToken`.
 - Controllers are plural and end in `Controller` (`PetsController`), with `[ApiController]` and `[Route("api/[controller]")]`.
 - Respect nullable annotations. Don't suppress warnings with `!` unless you can justify it.
@@ -77,7 +78,7 @@ dotnet ef database update --project src/Animal.Data --startup-project src/Animal
 dotnet ef migrations script --idempotent --configuration Release --project src/Animal.Data/Animal.Data.csproj --startup-project src/Animal.API/Animal.API.csproj
 ```
 
-- Tests live in `tests/<Project>.Tests/` (xUnit) and are listed in the `.slnx`. Service logic gets unit tests in `Animal.Data.Tests`. Endpoints get integration tests in `Animal.API.Tests` using `WebApplicationFactory<Program>`, with `ConfigureTestServices` to swap in known fake data. Keep at least one test that uses the real `Program.cs` registrations so DI mistakes are caught.
+- Tests live in `tests/<Project>.Tests/` (xUnit) and are listed in the `.slnx`. Pure domain rules get unit tests in `Animal.Domain.Tests`, repositories in `Animal.Data.Tests`, and application services in `Animal.API.Tests`. Endpoints get integration tests in `Animal.API.Tests` using `WebApplicationFactory<Program>`, with `ConfigureTestServices` to swap in known fake data. Keep at least one test that uses the real `Program.cs` registrations so DI mistakes are caught.
 - New services and controller logic must ship with tests.
 - The CI workflow (`.github/workflows/Ci.yml`) runs on pushes and PRs to `main` and must pass. The .NET version in CI must match `<TargetFramework>` in the `.csproj` files.
 - Use `src/Animal.API/Animal.API.http` for manual endpoint checks.

@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 
-namespace Animal.Domain.Services
+namespace Animal.API.Services
 {
+    // Not implemented yet. The slice owner switches these to the DTOs in docs/milestone-3/api-contracts.md.
     public interface IAppointmentService
     {
-        Appointment GetAppointment(int id);
-        List<Appointment> GetAppointments();
-        Appointment CreateAppointment(Appointment appointment);
-        void UpdateAppointment(Appointment appointment);
-        void CancelAppointment(int id);
+        Task<Appointment> GetAppointmentAsync(int id, CancellationToken cancellationToken = default);
+        Task<List<Appointment>> GetAppointmentsAsync(CancellationToken cancellationToken = default);
+        Task<Appointment> CreateAppointmentAsync(Appointment appointment, CancellationToken cancellationToken = default);
+        Task UpdateAppointmentAsync(Appointment appointment, CancellationToken cancellationToken = default);
+        Task CancelAppointmentAsync(int id, CancellationToken cancellationToken = default);
     }
 }

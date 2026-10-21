@@ -1,16 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 
-namespace Animal.Domain.Services
+namespace Animal.API.Services
 {
+    // Not implemented yet. The slice owner switches these to the DTOs in docs/milestone-3/api-contracts.md.
     public interface IUserService
     {
-        User GetUser(int id);
-        List<User> GetUsers();
-        User CreateUser(User user);
-        void UpdateUser(User user);
-        void DeleteUser(int id);
+        Task<User> GetUserAsync(int id, CancellationToken cancellationToken = default);
+        Task<List<User>> GetUsersAsync(CancellationToken cancellationToken = default);
+        Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default);
+        Task UpdateUserAsync(User user, CancellationToken cancellationToken = default);
+        Task DeleteUserAsync(int id, CancellationToken cancellationToken = default);
     }
 }
