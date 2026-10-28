@@ -1,10 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Animal.Domain.Entities;
+﻿using Animal.Domain.Entities;
 
-namespace Animal.Domain.Services
+namespace Animal.API.Services
 {
+    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
+    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
     public interface IAppointmentService
     {
         Appointment GetAppointment(int id);

@@ -16,4 +16,52 @@ Accept: application/json
 GET {{Animal.API_HostAddress}}/api/pets?maxAge=-1
 Accept: application/json
 
+### One pet
+GET {{Animal.API_HostAddress}}/api/pets/1
+Accept: application/json
+
+### Pet that doesn't exist, should return 404
+GET {{Animal.API_HostAddress}}/api/pets/999
+Accept: application/json
+
+### Add a pet
+POST {{Animal.API_HostAddress}}/api/pets
+Content-Type: application/json
+
+{
+  "name": "Nugget",
+  "species": "Rabbit",
+  "breed": "Mini Rex",
+  "age": 1,
+  "isAvailable": true,
+  "shelterId": 2
+}
+
+### Add a pet to a shelter that doesn't exist, should return 400
+POST {{Animal.API_HostAddress}}/api/pets
+Content-Type: application/json
+
+{
+  "name": "Ghost",
+  "species": "Cat",
+  "age": 2,
+  "shelterId": 99
+}
+
+### Update a pet
+PUT {{Animal.API_HostAddress}}/api/pets/1
+Content-Type: application/json
+
+{
+  "name": "Biscuit",
+  "species": "Dog",
+  "breed": "Beagle",
+  "age": 4,
+  "isAvailable": true,
+  "shelterId": 1
+}
+
+### Delete a pet
+DELETE {{Animal.API_HostAddress}}/api/pets/5
+
 ###

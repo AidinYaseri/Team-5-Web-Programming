@@ -1,6 +1,6 @@
-﻿using Animal.Data;
-using Animal.Data.Services;
-using Animal.Domain.Services;
+﻿using Animal.API.ErrorHandling;
+using Animal.API.Services;
+using Animal.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,12 +13,17 @@ var connectionString = builder.Configuration.GetConnectionString("AnimalDb")
     ?? throw new InvalidOperationException("Connection string 'AnimalDb' is missing.");
 builder.Services.AddAnimalData(connectionString);
 
-// Factory on purpose: otherwise DI picks the IEnumerable<Pet> constructor and injects an empty list.
-builder.Services.AddSingleton<IPetService>(_ => new InMemoryPetService());
+// Application services. Scoped, like the DbContext they use through the repositories.
+builder.Services.AddScoped<IPetService, PetService>();
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<DomainExceptionHandler>();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

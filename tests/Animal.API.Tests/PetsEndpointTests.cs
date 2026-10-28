@@ -1,36 +1,35 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
-using Animal.Data.Services;
+using Animal.Data.Context;
 using Animal.Domain.Entities;
-using Animal.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Animal.API.Tests
 {
-    public class PetsEndpointTests : IClassFixture<WebApplicationFactory<Program>>
+    public class PetsEndpointTests : IClassFixture<AnimalApiFactory>
     {
+        private readonly AnimalApiFactory _factory;
         private readonly HttpClient _client;
 
-        public PetsEndpointTests(WebApplicationFactory<Program> factory)
+        public PetsEndpointTests(AnimalApiFactory factory)
         {
-            // Swap the real IPetService for one with known fake pets so the results don't depend on seed data.
-            _client = factory.WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureTestServices(services =>
-                {
-                    services.AddSingleton<IPetService>(new InMemoryPetService(
-                    [
-                        new Pet { Id = 1, Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 3, IsAvailable = true, ShelterId = 1 },
-                        new Pet { Id = 2, Name = "Mochi", Species = "Cat", Breed = "Siamese", Age = 1, IsAvailable = true, ShelterId = 1 },
-                        new Pet { Id = 3, Name = "Rex", Species = "Dog", Breed = "German Shepherd", Age = 7, IsAvailable = false, ShelterId = 2 }
-                    ]));
-                });
-            }).CreateClient();
+            _factory = factory;
+
+            // xUnit makes a new instance per test, so every test starts from these known pets, not the seed data.
+            factory.ResetPets(
+            [
+                new Pet { Id = 1, Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 3, IsAvailable = true, ShelterId = 1 },
+                new Pet { Id = 2, Name = "Mochi", Species = "Cat", Breed = "Siamese", Age = 1, IsAvailable = true, ShelterId = 1 },
+                new Pet { Id = 3, Name = "Rex", Species = "Dog", Breed = "German Shepherd", Age = 7, IsAvailable = false, ShelterId = 2 }
+            ]);
+
+            _client = factory.CreateClient();
         }
+
+        private static CreatePetRequest NewPet() =>
+            new() { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, IsAvailable = true, ShelterId = 2 };
 
         private async Task<int[]> GetIdsAsync(string url)
         {
@@ -140,6 +139,134 @@ namespace Animal.API.Tests
             var withFalse = await GetIdsAsync("/api/pets?availableOnly=false");
 
             Assert.Equal(none, withFalse);
+        }
+    
+
+        [Fact]
+        public async Task GetPet_Existing_ReturnsPet()
+        {
+            var pet = await _client.GetFromJsonAsync<PetResponse>("/api/pets/2");
+
+            Assert.NotNull(pet);
+            Assert.Equal("Mochi", pet.Name);
+        }
+
+        [Fact]
+        public async Task GetPet_Missing_ReturnsNotFoundProblem()
+        {
+            var response = await _client.GetAsync("/api/pets/999");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        }
+
+        [Fact]
+        public async Task CreatePet_Valid_ReturnsCreatedWithLocation()
+        {
+            var response = await _client.PostAsJsonAsync("/api/pets", NewPet());
+
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+            var created = await response.Content.ReadFromJsonAsync<PetResponse>();
+            Assert.NotNull(created);
+            Assert.Equal("Nugget", created.Name);
+            Assert.EndsWith($"/api/pets/{created.Id}", response.Headers.Location?.ToString(), StringComparison.OrdinalIgnoreCase);
+
+            // It really was saved: a separate request finds it.
+            var fetched = await _client.GetFromJsonAsync<PetResponse>($"/api/pets/{created.Id}");
+            Assert.Equal(created, fetched);
+        }
+
+        [Fact]
+        public async Task CreatePet_MissingName_ReturnsValidationProblem()
+        {
+            var request = NewPet();
+            request.Name = "";
+
+            var response = await _client.PostAsJsonAsync("/api/pets", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreatePet_UnknownShelter_ReturnsBadRequestFromDomainCheck()
+        {
+            var request = NewPet();
+            request.ShelterId = 99;
+
+            var response = await _client.PostAsJsonAsync("/api/pets", request);
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Contains("Shelter 99 does not exist.", await response.Content.ReadAsStringAsync());
+        }
+
+        [Fact]
+        public async Task UpdatePet_Existing_ReturnsNoContentAndSaves()
+        {
+            var request = new UpdatePetRequest { Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 4, IsAvailable = false, ShelterId = 1 };
+
+            var response = await _client.PutAsJsonAsync("/api/pets/1", request);
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            var pet = await _client.GetFromJsonAsync<PetResponse>("/api/pets/1");
+            Assert.Equal(4, pet!.Age);
+            Assert.False(pet.IsAvailable);
+        }
+
+        [Fact]
+        public async Task UpdatePet_Missing_ReturnsNotFound()
+        {
+            var request = new UpdatePetRequest { Name = "Ghost", Species = "Cat", Age = 2, ShelterId = 1 };
+
+            var response = await _client.PutAsJsonAsync("/api/pets/999", request);
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeletePet_Existing_ReturnsNoContentAndRemovesIt()
+        {
+            var response = await _client.DeleteAsync("/api/pets/3");
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/pets/3")).StatusCode);
+        }
+
+        [Fact]
+        public async Task DeletePet_Missing_ReturnsNotFound()
+        {
+            var response = await _client.DeleteAsync("/api/pets/999");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        // The Restrict foreign key blocks the delete, and DomainExceptionHandler turns the DbUpdateException into a 409.
+        [Fact]
+        public async Task DeletePet_WithAdoptionApplication_ReturnsConflict()
+        {
+            using (var scope = _factory.Services.CreateScope())
+            {
+                var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+                context.Users.Add(new User { Id = 1, Name = "Test User", Email = "test.user@example.com", PhoneNumber = "555-0199" });
+                context.AdoptionApplications.Add(new AdoptionApplication { UserId = 1, PetId = 1, ApplicationDate = DateTime.UtcNow });
+                context.SaveChanges();
+            }
+
+            try
+            {
+                var response = await _client.DeleteAsync("/api/pets/1");
+
+                Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+                Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+            }
+            finally
+            {
+                // Clean up so ResetPets can delete pet 1 for the next test.
+                using var scope = _factory.Services.CreateScope();
+                var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+                context.AdoptionApplications.RemoveRange(context.AdoptionApplications);
+                context.Users.RemoveRange(context.Users);
+                context.SaveChanges();
+            }
         }
     }
 }

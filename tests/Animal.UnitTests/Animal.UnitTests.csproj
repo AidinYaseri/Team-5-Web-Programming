@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
+    <ProjectReference Include="..\..\src\Animal.API\Animal.API.csproj" />
   </ItemGroup>
 
 </Project>
