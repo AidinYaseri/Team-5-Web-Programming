@@ -1,0 +1,130 @@
+@page "/pets"
+@rendermode InteractiveServer
+@inject PetsApiClient Api
+
+<PageTitle>Pets</PageTitle>
+
+<div class="page-heading">
+    <h1>Pets</h1>
+    <a class="button" href="pets/new">Add a pet</a>
+</div>
+
+<form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
+    <label>
+        Species
+        <input @bind="_species" placeholder="Any" maxlength="50" />
+    </label>
+    <label>
+        Max age
+        <input type="number" min="0" max="100" @bind="_maxAge" placeholder="Any" />
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" @bind="_availableOnly" />
+        Available only
+    </label>
+    <button type="submit">Search</button>
+</form>
+
+@if (_error is not null)
+{
+    <p class="error" role="alert">@_error</p>
+}
+
+@if (_pets is null)
+{
+    <p>Loading...</p>
+}
+else if (_pets.Count == 0)
+{
+    <p>No pets match those filters.</p>
+}
+else
+{
+    <table class="pets">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Species</th>
+                <th>Breed</th>
+                <th>Age</th>
+                <th>Status</th>
+                <th>Shelter</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var pet in _pets)
+            {
+                <tr>
+                    <td data-label="Name">@pet.Name</td>
+                    <td data-label="Species">@pet.Species</td>
+                    <td data-label="Breed">@pet.Breed</td>
+                    <td data-label="Age">@pet.Age</td>
+                    <td data-label="Status">@(pet.IsAvailable ? "Available" : "Adopted")</td>
+                    <td data-label="Shelter">@pet.ShelterId</td>
+                    <td class="actions">
+                        <a href="pets/@pet.Id/edit">Edit</a>
+                        @if (_confirmDeleteId == pet.Id)
+                        {
+                            <button class="danger" @onclick="() => DeleteAsync(pet.Id)">Confirm delete</button>
+                            <button class="secondary" @onclick="() => _confirmDeleteId = null">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="secondary" @onclick="() => _confirmDeleteId = pet.Id">Delete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<PetResponse>? _pets;
+    private string? _species;
+    private int? _maxAge;
+    private bool _availableOnly;
+    private int? _confirmDeleteId;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => SearchAsync();
+
+    private async Task SearchAsync()
+    {
+        _error = null;
+        try
+        {
+            _pets = await Api.GetPetsAsync(_species, _maxAge, _availableOnly);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _pets = [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+            _pets = [];
+        }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        _confirmDeleteId = null;
+        _error = null;
+        try
+        {
+            await Api.DeletePetAsync(id);
+            _pets?.RemoveAll(p => p.Id == id);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+        }
+    }
+}

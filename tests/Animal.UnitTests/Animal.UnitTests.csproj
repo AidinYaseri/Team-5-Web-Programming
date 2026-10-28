@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
     <ProjectReference Include="..\..\src\Animal.API\Animal.API.csproj" />
+    <ProjectReference Include="..\..\src\Animal.Client\Animal.Client.csproj" />
   </ItemGroup>
 
 </Project>
