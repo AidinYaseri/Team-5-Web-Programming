@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+using Animal.Domain.Enums;
 
-namespace Animal.Domain.Models
+namespace Animal.Domain.Entities
 {
     public class Appointment
     {
@@ -11,6 +9,6 @@ namespace Animal.Domain.Models
         public int PetId { get; set; }
         public int ShelterId { get; set; }
         public DateTime AppointmentDate { get; set; }
-        public string Status { get; set; }
+        public AppointmentStatus Status { get; set; } = AppointmentStatus.Scheduled;
     }
 }

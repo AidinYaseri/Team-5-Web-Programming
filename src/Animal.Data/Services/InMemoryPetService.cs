@@ -1,5 +1,6 @@
 using Animal.Data.SeedData;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
+using Animal.Domain.Queries;
 using Animal.Domain.Services;
 
 namespace Animal.Data.Services

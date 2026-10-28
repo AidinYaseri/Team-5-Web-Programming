@@ -1,5 +1,6 @@
 using Animal.API.Contracts;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
+using Animal.Domain.Queries;
 using Animal.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 

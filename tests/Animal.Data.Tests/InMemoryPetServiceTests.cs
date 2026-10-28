@@ -1,5 +1,6 @@
 using Animal.Data.Services;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
+using Animal.Domain.Queries;
 
 namespace Animal.Data.Tests
 {

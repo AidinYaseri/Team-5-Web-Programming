@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
+using Animal.Domain.Queries;
 
 namespace Animal.Domain.Services
 {

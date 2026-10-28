@@ -2,7 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
 using Animal.Data.Services;
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 using Animal.Domain.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;

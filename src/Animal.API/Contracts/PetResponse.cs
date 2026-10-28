@@ -1,4 +1,4 @@
-using Animal.Domain.Models;
+using Animal.Domain.Entities;
 
 namespace Animal.API.Contracts
 {
