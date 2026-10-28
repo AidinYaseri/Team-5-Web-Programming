@@ -1,7 +1,6 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/tests/">
-    <Project Path="tests/Animal.API.Tests/Animal.API.Tests.csproj" />
-    <Project Path="tests/Animal.Data.Tests/Animal.Data.Tests.csproj" />
+    <Project Path="tests/Animal.IntegrationTests/Animal.IntegrationTests.csproj" />
     <Project Path="tests/Animal.UnitTests/Animal.UnitTests.csproj" />
   </Folder>
   <Project Path="src/Animal.API/Animal.API.csproj" />

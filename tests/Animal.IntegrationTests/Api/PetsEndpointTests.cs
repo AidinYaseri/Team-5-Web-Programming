@@ -6,7 +6,7 @@ using Animal.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Animal.API.Tests
+namespace Animal.IntegrationTests.Api
 {
     public class PetsEndpointTests : IClassFixture<AnimalApiFactory>
     {
@@ -140,7 +140,7 @@ namespace Animal.API.Tests
 
             Assert.Equal(none, withFalse);
         }
-    
+
 
         [Fact]
         public async Task GetPet_Existing_ReturnsPet()

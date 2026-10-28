@@ -1,6 +1,6 @@
 using Animal.Data.Repositories;
 
-namespace Animal.Data.Tests
+namespace Animal.IntegrationTests.Data
 {
     public class ShelterRepositoryTests : IDisposable
     {

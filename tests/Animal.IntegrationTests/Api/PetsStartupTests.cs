@@ -1,7 +1,7 @@
 using System.Net.Http.Json;
 using Animal.API.Contracts;
 
-namespace Animal.API.Tests
+namespace Animal.IntegrationTests.Api
 {
     // Uses the real Program.cs registrations (only the database provider is swapped) to check the DI wiring.
     public class PetsStartupTests : IClassFixture<AnimalApiFactory>

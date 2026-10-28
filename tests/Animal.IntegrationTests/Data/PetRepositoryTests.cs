@@ -3,7 +3,7 @@ using Animal.Domain.Entities;
 using Animal.Domain.Queries;
 using Microsoft.EntityFrameworkCore;
 
-namespace Animal.Data.Tests
+namespace Animal.IntegrationTests.Data
 {
     // Runs against the seed data: 1 Biscuit (Dog, 3), 2 Mochi (Cat, 1), 3 Rex (Dog, 7, adopted), 4 Pepper (Rabbit, 2), 5 Luna (Cat, 9).
     public class PetRepositoryTests : IDisposable

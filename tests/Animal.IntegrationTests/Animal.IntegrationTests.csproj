@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -22,8 +22,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Animal.API\Animal.API.csproj" />
-    <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
     <ProjectReference Include="..\..\src\Animal.Data\Animal.Data.csproj" />
+    <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
   </ItemGroup>
 
 </Project>

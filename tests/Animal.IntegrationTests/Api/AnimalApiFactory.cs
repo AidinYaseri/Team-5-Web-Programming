@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 
-namespace Animal.API.Tests
+namespace Animal.IntegrationTests.Api
 {
     // Runs the real Program.cs, but swaps SQL Server for SQLite in memory so the tests need no database server.
     // Everything else (repositories, PetService, exception handler) is the real registration.
