@@ -37,6 +37,22 @@ public class ScopeAuthorizationTests
         Assert.False(ScopeClaims.HasScope(user, "pets.write"));
     }
 
+    [Fact]
+    public void HasScope_ScopeWithExtraSegment_ReturnsFalse()
+    {
+        var user = UserWithClaim("scope", "pets.write.all");
+
+        Assert.False(ScopeClaims.HasScope(user, "pets.write"));
+    }
+
+    [Fact]
+    public void HasScope_DifferentCase_ReturnsFalse()
+    {
+        var user = UserWithClaim("scope", "PETS.WRITE");
+
+        Assert.False(ScopeClaims.HasScope(user, "pets.write"));
+    }
+
     private static ClaimsPrincipal UserWithClaim(string type, string value) =>
         new(new ClaimsIdentity([new Claim(type, value)], "test"));
 }

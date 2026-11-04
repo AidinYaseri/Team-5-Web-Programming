@@ -3,6 +3,13 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using Animal.API.Contracts;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization.Infrastructure;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Animal.IntegrationTests.Api;
 
@@ -110,6 +117,47 @@ public class AuthTests : IClassFixture<AnimalApiFactory>
         using var client = _factory.CreateClient();
 
         var response = await client.GetAsync("/api/pets");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public void AuthorizationOptions_FallbackPolicy_RequiresAuthenticatedUser()
+    {
+        var options = _factory.Services
+            .GetRequiredService<IOptions<AuthorizationOptions>>()
+            .Value;
+
+        Assert.NotNull(options.FallbackPolicy);
+        Assert.Contains(
+            options.FallbackPolicy.Requirements,
+            requirement => requirement is DenyAnonymousAuthorizationRequirement);
+    }
+
+    [Fact]
+    public void ControllerEndpoints_HaveExplicitAuthorizationMetadata()
+    {
+        var endpoints = _factory.Services
+            .GetRequiredService<EndpointDataSource>()
+            .Endpoints
+            .Where(endpoint => endpoint.Metadata.GetMetadata<ControllerActionDescriptor>() is not null)
+            .ToList();
+
+        Assert.NotEmpty(endpoints);
+        Assert.All(
+            endpoints,
+            endpoint => Assert.True(
+                endpoint.Metadata.GetMetadata<IAllowAnonymous>() is not null
+                || endpoint.Metadata.GetMetadata<IAuthorizeData>() is not null,
+                $"Controller endpoint '{endpoint.DisplayName}' has no authorization metadata."));
+    }
+
+    [Fact]
+    public async Task OpenApi_WithoutAuthorizationHeader_ReturnsSuccess()
+    {
+        using var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/openapi/v1.json");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }

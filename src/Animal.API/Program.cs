@@ -43,25 +43,35 @@ builder.Services.AddAuthorization(options =>
         .RequireAuthenticatedUser()
         .Build();
     options.AddPolicy(AuthorizationPolicies.PetsWrite, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.PetsWrite)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.PetsWrite)));
     options.AddPolicy(AuthorizationPolicies.SheltersWrite, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.SheltersWrite)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.SheltersWrite)));
     options.AddPolicy(AuthorizationPolicies.UsersRead, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.UsersRead)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.UsersRead)));
     options.AddPolicy(AuthorizationPolicies.UsersWrite, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.UsersWrite)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.UsersWrite)));
     options.AddPolicy(AuthorizationPolicies.AdoptionsRead, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsRead)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsRead)));
     options.AddPolicy(AuthorizationPolicies.AdoptionsWrite, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsWrite)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsWrite)));
     options.AddPolicy(AuthorizationPolicies.AdoptionsReview, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsReview)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AdoptionsReview)));
     options.AddPolicy(AuthorizationPolicies.AppointmentsRead, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AppointmentsRead)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AppointmentsRead)));
     options.AddPolicy(AuthorizationPolicies.AppointmentsWrite, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AppointmentsWrite)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.AppointmentsWrite)));
     options.AddPolicy(AuthorizationPolicies.NotificationsRead, policy =>
-        policy.RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.NotificationsRead)));
+        policy.RequireAuthenticatedUser()
+            .RequireAssertion(context => ScopeClaims.HasScope(context.User, AuthorizationPolicies.NotificationsRead)));
 });
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
