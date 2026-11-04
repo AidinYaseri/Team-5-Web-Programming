@@ -13,7 +13,15 @@ namespace Animal.Domain.Services
 
             if (appointment.AppointmentDate <= now)
             {
-                throw new DomainValidationException("An appointment must be scheduled in the future.");
+                throw new AppointmentConflictException("An appointment must be scheduled in the future.");
+            }
+        }
+
+        public static void EnsureSlotIsAvailable(bool isTaken)
+        {
+            if (isTaken)
+            {
+                throw new AppointmentConflictException("That appointment time is already booked at this shelter.");
             }
         }
 

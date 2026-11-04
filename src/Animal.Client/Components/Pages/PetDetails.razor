@@ -1,0 +1,38 @@
+@page "/pets/{Id:int}"
+@rendermode InteractiveServer
+@inject PetsApiClient Api
+
+<PageTitle>Pet details</PageTitle>
+
+@if (_error is not null) { <p class="error" role="alert">@_error</p> }
+else if (_pet is null) { <p>Loading pet…</p> }
+else
+{
+    <h1>@_pet.Name</h1>
+    <dl class="details">
+        <dt>Species</dt><dd>@_pet.Species</dd>
+        <dt>Breed</dt><dd>@(_pet.Breed ?? "Not listed")</dd>
+        <dt>Age</dt><dd>@_pet.Age</dd>
+        <dt>Status</dt><dd>@(_pet.IsAvailable ? "Available" : "Adopted")</dd>
+        <dt>Shelter</dt><dd>@_pet.ShelterId</dd>
+    </dl>
+    @if (_pet.IsAvailable) { <p><a class="button" href="/pets/@_pet.Id/visit">Book a visit</a></p> }
+    <p><a href="/pets">Back to pets</a></p>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private PetResponse? _pet;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            _pet = await Api.GetPetAsync(Id);
+            _error = _pet is null ? "Pet not found." : null;
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; }
+    }
+}

@@ -16,6 +16,8 @@ namespace Animal.Data
             services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AnimalDbContext>());
             services.AddScoped<IPetRepository, PetRepository>();
             services.AddScoped<IShelterRepository, ShelterRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 
             return services;
         }

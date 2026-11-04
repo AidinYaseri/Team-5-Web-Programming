@@ -195,6 +195,81 @@ table.pets {
     color: var(--danger);
 }
 
+.success {
+    color: var(--accent-dark);
+    font-weight: 600;
+}
+
+.notification-list, .appointment-list {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0;
+    list-style: none;
+}
+
+.notification-list li, .appointment-list li {
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+
+.notification-list li.unread {
+    border-left: 4px solid var(--accent);
+    background: var(--muted);
+}
+
+.notification-list p, .appointment-list p {
+    margin: 0 0 0.5rem;
+}
+
+.notification-list button, .appointment-list button {
+    margin: 0.5rem 0.5rem 0 0;
+}
+
+.details {
+    display: grid;
+    grid-template-columns: minmax(8rem, auto) 1fr;
+    gap: 0.5rem 1rem;
+    max-width: 32rem;
+}
+
+.details dt {
+    font-weight: 700;
+}
+
+.details dd {
+    margin: 0;
+}
+
+.unread-count {
+    display: inline-block;
+    min-width: 1.25rem;
+    padding: 0.1rem 0.35rem;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--accent-dark);
+    text-align: center;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.site-header button.link-button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #fff;
+    text-decoration: underline;
+}
+
+input[type="datetime-local"] {
+    padding: 0.4rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font: inherit;
+}
+
 @media (max-width: 640px) {
     table.pets thead {
         display: none;

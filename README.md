@@ -1,160 +1,124 @@
-# Animal Adoption API
+# Animal Adoption
 
 Team 5 · Web Programming III
 
-An ASP.NET Core Web API (.NET 10) for managing shelters, pets, users, adoption applications, appointments and notifications.
+Animal Adoption is a .NET 10 web application with an ASP.NET Core API, a Blazor Server client, and SQL Server persistence. The client uses HTTP APIs and never references the data or domain projects.
 
-## Repository structure
+## Projects
 
-```
-Team-5-Web-Programming/
-├── .github/
-│   └── workflows/Ci.yml          # build + test + EF migration check on every push / PR to main
-├── docs/
-│   └── diagrams/                 # service + database diagrams (.mmd sources and .png exports)
-├── src/
-│   ├── Animal.API/               # Web API: Controllers, Contracts (DTOs), Program.cs
-│   ├── Animal.Domain/            # Models (entities) and Services (service interfaces)
-│   └── Animal.Data/              # EF Core: Context, Configurations, Migrations, SeedData, Repositories
-├── Team-5-Web-Programming.slnx   # solution file, open this in Visual Studio
-└── README.md
+```text
+src/Animal.Client/   Blazor Server UI, OIDC sign-in, typed HTTP clients
+src/Animal.API/      REST controllers, request/response contracts, application services
+src/Animal.Domain/   Entities, enums, business rules, domain exceptions
+src/Animal.Data/     EF Core DbContext, configurations, migrations, repositories
+tests/               xUnit unit and API integration tests
+docs/diagrams/       Mermaid diagram sources and rendered images
 ```
 
-Project references: `Animal.API → Animal.Domain, Animal.Data` and `Animal.Data → Animal.Domain`.
+Project references flow inward: `Animal.API` references `Animal.Domain` and `Animal.Data`; `Animal.Data` references `Animal.Domain`. `Animal.Client` references none of the backend projects.
 
-## Service Diagram
+## Architecture
 
 ```mermaid
-flowchart TB
-    Client(["Client<br/>(Swagger, .http file, front-end)"])
+flowchart LR
+    Browser[Browser]
+    Client[Animal.Client<br/>Blazor Server]
+    Identity[OIDC identity provider]
+    API[Animal.API<br/>REST + bearer authorization]
+    Services[Application services]
+    Domain[Animal.Domain<br/>entities + rules]
+    Data[Animal.Data<br/>EF Core repositories]
+    DB[(SQL Server)]
 
-    subgraph API["Animal.API  (Web API layer)"]
-        direction LR
-        PetsC[PetsController]
-        SheltersC[SheltersController]
-        UsersC[UsersController]
-        AdoptionsC[AdoptionsController]
-        AppointmentsC[AppointmentsController]
-        NotificationsC[NotificationsController]
-    end
-
-    subgraph DOMAIN["Animal.Domain  (models + service interfaces)"]
-        direction LR
-        PetS[IPetService]
-        ShelterS[IShelterService]
-        UserS[IUserService]
-        AdoptionS[IAdoptionService]
-        AppointmentS[IAppointmentService]
-        NotificationS[INotificationService]
-    end
-
-    subgraph DATA["Animal.Data  (EF Core)"]
-        direction LR
-        Repos["Repositories"]
-        Ctx["AnimalDbContext<br/>Configurations / Migrations / SeedData"]
-    end
-
-    DB[("SQL Server")]
-
-    Client -->|HTTP / JSON| API
-
-    PetsC --> PetS
-    SheltersC --> ShelterS
-    UsersC --> UserS
-    AdoptionsC --> AdoptionS
-    AppointmentsC --> AppointmentS
-    NotificationsC --> NotificationS
-
-    DOMAIN -->|implemented using| DATA
-    Repos --> Ctx
-    DATA -->|EF Core| DB
+    Browser <-->|interactive UI + cookie| Client
+    Client <-->|authorization code + PKCE| Identity
+    Client -->|HTTP / JSON + bearer token| API
+    API --> Services
+    Services --> Domain
+    Services --> Data
+    Data --> DB
 ```
 
-### Service interfaces
+The client and API are separate processes. `Animal.Client` calls the API through typed `HttpClient` services. Its OIDC code flow uses PKCE; the client secret, when required by the identity provider, stays in server-side configuration. The API validates bearer tokens and scope claims when WI-3 authentication is configured.
+
+### Sign-in and API request flow
 
 ```mermaid
-classDiagram
-    direction LR
-    class IPetService {
-        <<interface>>
-        +GetPet(id) Pet
-        +GetPets() List~Pet~
-        +GetAvailablePets() List~Pet~
-        +SearchPets(criteria) List~Pet~
-        +CreatePet(pet) Pet
-        +UpdatePet(pet)
-        +DeletePet(id)
-    }
-    class IShelterService {
-        <<interface>>
-        +GetShelter(id) Shelter
-        +GetShelters() List~Shelter~
-        +CreateShelter(shelter) Shelter
-        +UpdateShelter(shelter)
-        +DeleteShelter(id)
-    }
-    class IUserService {
-        <<interface>>
-        +GetUser(id) User
-        +GetUsers() List~User~
-        +CreateUser(user) User
-        +UpdateUser(user)
-        +DeleteUser(id)
-    }
-    class IAdoptionService {
-        <<interface>>
-        +GetApplication(id) AdoptionApplication
-        +GetApplications() List~AdoptionApplication~
-        +CreateApplication(application) AdoptionApplication
-        +ApproveApplication(id)
-        +RejectApplication(id)
-    }
-    class IAppointmentService {
-        <<interface>>
-        +GetAppointment(id) Appointment
-        +GetAppointments() List~Appointment~
-        +CreateAppointment(appointment) Appointment
-        +UpdateAppointment(appointment)
-        +CancelAppointment(id)
-    }
-    class INotificationService {
-        <<interface>>
-        +GetNotification(id) Notification
-        +GetNotifications() List~Notification~
-        +CreateNotification(notification) Notification
-        +MarkAsRead(id)
-    }
-    IAdoptionService ..> IPetService : uses
-    IAdoptionService ..> INotificationService : uses
-    IAppointmentService ..> INotificationService : uses
+sequenceDiagram
+    actor Adopter
+    participant Client as Blazor Client
+    participant IdP as OIDC Provider
+    participant API as Animal API
+    Adopter->>Client: Choose Sign in
+    Client->>IdP: Authorization request (code + PKCE challenge)
+    IdP-->>Client: Authorization code
+    Client->>IdP: Exchange code with PKCE verifier
+    IdP-->>Client: ID token and API access token
+    Client-->>Adopter: Establish server-side sign-in session
+    Client->>API: HTTP request with bearer access token
+    API->>API: Validate issuer, audience, lifetime and scope
+    API-->>Client: JSON response
 ```
 
-PNG exports: [service-diagram.png](docs/diagrams/service-diagram.png) · [services-class-diagram.png](docs/diagrams/services-class-diagram.png)
+Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [services-class-diagram.mmd](docs/diagrams/services-class-diagram.mmd). The database diagram is available at [database-diagram.png](docs/diagrams/database-diagram.png).
 
-<details>
-<summary>Original service diagram sketch</summary>
+## Run locally
 
-<img width="393" height="442" alt="Original service diagram" src="https://github.com/user-attachments/assets/21567fdc-b163-442c-8a17-169fd62c7fa9" />
+Install the .NET 10 SDK. Start SQL Server/LocalDB and configure the API connection string if the default LocalDB instance is unavailable.
 
-</details>
+Restore and build the solution:
 
-## Database Diagram
-
-![Database diagram](docs/diagrams/database-diagram.png)
-
-## Getting started
-
-```bash
+```powershell
 dotnet restore Team-5-Web-Programming.slnx
 dotnet build Team-5-Web-Programming.slnx
+```
+
+In one terminal, start the API:
+
+```powershell
 dotnet run --project src/Animal.API
 ```
 
-The API runs on `http://localhost:5015` (or `https://localhost:7298` with the https profile). The OpenAPI document is served at `/openapi/v1.json` in Development.
+The API listens on `http://localhost:5015` and `https://localhost:7298`. Its OpenAPI document is available at `/openapi/v1.json` in Development.
+
+In a second terminal, start the client:
+
+```powershell
+dotnet run --project src/Animal.Client
+```
+
+The client listens on `http://localhost:5012` and uses `AnimalApi:BaseUrl` from its configuration to reach the API. Browse pets without signing in. To enable sign-in, configure an OIDC authority and client ID for the client and the matching authority/audience for the API. Keep any client secret in user-secrets or an environment variable; never put it in browser code or committed settings.
+
+For local OIDC configuration, set values with user-secrets from the repository root:
+
+```powershell
+dotnet user-secrets init --project src/Animal.Client
+dotnet user-secrets set "Authentication:Authority" "https://your-provider.example/" --project src/Animal.Client
+dotnet user-secrets set "Authentication:ClientId" "your-client-id" --project src/Animal.Client
+dotnet user-secrets set "Authentication:ClientSecret" "your-server-side-secret" --project src/Animal.Client
+```
+
+Set the provider's API scopes with `Authentication:Scopes` and align the API's `Authentication:Authority` and `Authentication:Audience` settings. The local API CORS origin is configurable through `Cors:ClientOrigin` (Development defaults to `http://localhost:5012`).
+
+## Data and tests
+
+EF Core mappings are in `src/Animal.Data/Configurations`; migrations are in `src/Animal.Data/Migrations`. Apply migrations with:
+
+```powershell
+dotnet ef database update --project src/Animal.Data --startup-project src/Animal.API
+```
+
+Run the test suite with:
+
+```powershell
+dotnet test Team-5-Web-Programming.slnx
+```
+
+Unit tests cover domain rules. API integration tests run the real `Program.cs` registrations against an in-memory SQLite database.
 
 ## Team conventions
 
-- Branch off `main`, open a pull request, and let CI pass before merging.
-- Don't commit `bin/`, `obj/`, `.vs/` or `*.user` files (they're in `.gitignore`).
-- Line endings are normalized by `.gitattributes`, so Windows and Mac teammates won't get whole-file diffs.
-- To update a diagram, edit the `.mmd` file in `docs/diagrams/`, paste it into the README block, and re-export the PNG (e.g. with https://mermaid.live).
+- Work from an issue and branch, then submit a pull request for peer review.
+- Keep `bin/`, `obj/`, `.vs/`, and `*.user` files out of commits.
+- Keep Mermaid sources, README diagrams, and rendered images in sync when the architecture changes.
+- Use only fictional data in seed rows and tests. Never commit credentials, access tokens, or production connection strings.

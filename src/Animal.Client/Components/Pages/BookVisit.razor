@@ -1,0 +1,54 @@
+@page "/pets/{PetId:int}/visit"
+@rendermode InteractiveServer
+@inject AppointmentsApiClient Api
+
+<PageTitle>Book a visit</PageTitle>
+
+<h1>Book a visit</h1>
+<AuthorizeView>
+    <Authorized Context="auth">
+        <EditForm Model="_request" OnValidSubmit="BookAsync">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <label>
+                Visit date and time
+                <InputDate @bind-Value="_request.AppointmentDate" Type="InputDateType.DateTimeLocal" />
+            </label>
+            <button type="submit" disabled="@_saving">@(_saving ? "Booking…" : "Book visit")</button>
+        </EditForm>
+        @if (_error is not null) { <p class="error" role="alert">@_error</p> }
+        @if (_success) { <p class="success" role="status">Your visit is booked. We added a notification to your account.</p> }
+    </Authorized>
+    <NotAuthorized><p><a href="/auth/login">Sign in</a> to book a visit.</p></NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter] public int PetId { get; set; }
+    private CreateAppointmentRequest _request = new();
+    private bool _saving;
+    private bool _success;
+    private string? _error;
+
+    protected override void OnParametersSet() => _request = new CreateAppointmentRequest { PetId = PetId };
+
+    private async Task BookAsync()
+    {
+        if (_request.AppointmentDate is null || _request.AppointmentDate.Value <= DateTime.Now)
+        {
+            _error = "Choose a date and time in the future.";
+            return;
+        }
+
+        _saving = true;
+        _error = null;
+        try
+        {
+            _request.AppointmentDate = DateTime.SpecifyKind(_request.AppointmentDate.Value, DateTimeKind.Local).ToUniversalTime();
+            await Api.CreateAsync(_request);
+            _success = true;
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; }
+        finally { _saving = false; }
+    }
+}
