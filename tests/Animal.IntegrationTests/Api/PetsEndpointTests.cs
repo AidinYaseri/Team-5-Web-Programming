@@ -12,6 +12,7 @@ namespace Animal.IntegrationTests.Api
     {
         private readonly AnimalApiFactory _factory;
         private readonly HttpClient _client;
+        private readonly HttpClient _authenticatedClient;
 
         public PetsEndpointTests(AnimalApiFactory factory)
         {
@@ -26,6 +27,7 @@ namespace Animal.IntegrationTests.Api
             ]);
 
             _client = factory.CreateClient();
+            _authenticatedClient = factory.CreateAuthenticatedClient();
         }
 
         private static CreatePetRequest NewPet() =>
@@ -163,7 +165,7 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task CreatePet_Valid_ReturnsCreatedWithLocation()
         {
-            var response = await _client.PostAsJsonAsync("/api/pets", NewPet());
+            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", NewPet());
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var created = await response.Content.ReadFromJsonAsync<PetResponse>();
@@ -182,7 +184,7 @@ namespace Animal.IntegrationTests.Api
             var request = NewPet();
             request.Name = "";
 
-            var response = await _client.PostAsJsonAsync("/api/pets", request);
+            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", request);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
@@ -193,7 +195,7 @@ namespace Animal.IntegrationTests.Api
             var request = NewPet();
             request.ShelterId = 99;
 
-            var response = await _client.PostAsJsonAsync("/api/pets", request);
+            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", request);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             Assert.Contains("Shelter 99 does not exist.", await response.Content.ReadAsStringAsync());
@@ -204,7 +206,7 @@ namespace Animal.IntegrationTests.Api
         {
             var request = new UpdatePetRequest { Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 4, IsAvailable = false, ShelterId = 1 };
 
-            var response = await _client.PutAsJsonAsync("/api/pets/1", request);
+            var response = await _authenticatedClient.PutAsJsonAsync("/api/pets/1", request);
 
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             var pet = await _client.GetFromJsonAsync<PetResponse>("/api/pets/1");
@@ -217,7 +219,7 @@ namespace Animal.IntegrationTests.Api
         {
             var request = new UpdatePetRequest { Name = "Ghost", Species = "Cat", Age = 2, ShelterId = 1 };
 
-            var response = await _client.PutAsJsonAsync("/api/pets/999", request);
+            var response = await _authenticatedClient.PutAsJsonAsync("/api/pets/999", request);
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
@@ -225,7 +227,7 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task DeletePet_Existing_ReturnsNoContentAndRemovesIt()
         {
-            var response = await _client.DeleteAsync("/api/pets/3");
+            var response = await _authenticatedClient.DeleteAsync("/api/pets/3");
 
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/pets/3")).StatusCode);
@@ -234,7 +236,7 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task DeletePet_Missing_ReturnsNotFound()
         {
-            var response = await _client.DeleteAsync("/api/pets/999");
+            var response = await _authenticatedClient.DeleteAsync("/api/pets/999");
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
@@ -253,7 +255,7 @@ namespace Animal.IntegrationTests.Api
 
             try
             {
-                var response = await _client.DeleteAsync("/api/pets/1");
+                var response = await _authenticatedClient.DeleteAsync("/api/pets/1");
 
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
