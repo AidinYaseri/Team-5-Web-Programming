@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 // LocalDB by default (no password). Override with user-secrets or the ConnectionStrings__AnimalDb environment variable.
 var connectionString = builder.Configuration.GetConnectionString("AnimalDb")
@@ -18,6 +19,7 @@ builder.Services.AddAnimalData(connectionString);
 
 // Application services. Scoped, like the DbContext they use through the repositories.
 builder.Services.AddScoped<IPetService, PetService>();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
