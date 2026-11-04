@@ -230,7 +230,8 @@ without a token and will therefore need authenticated test clients.
 - [ ] No secret values appear in this plan or the intended diff.
 - [ ] `auth.md` covers the complete section-8 checklist.
   
-  ## Gate 1 review (Aiden, 2026-11-04)
+
+## Gate 1 review (Aiden, 2026-11-04)
 
 Reviewed Copilot's first plan against the Gate 1 checklist and the code. Approved after these corrections:
 
@@ -241,3 +242,16 @@ Reviewed Copilot's first plan against the Gate 1 checklist and the code. Approve
 5. Added a malformed-token (`Bearer not-a-jwt`) → 401 test.
 6. Noted that the Blazor client's create/edit/delete calls return 401 until WI-4 adds sign-in.
 7. The first plan claimed the brief referenced `tests/Animal.API.Tests`. It didn't (the brief uses `tests/Animal.IntegrationTests`). Removed the false conflict.
+
+## Gate 2: mutation check (human review)
+
+The auth was broken on purpose to prove the tests catch it. Every change was reverted afterwards.
+
+| Deliberate bug | Caught by |
+|---|---|
+| Removed `[Authorize]` from `CreatePet` | `ProtectedWrite_WithValidTokenMissingScope_ReturnsForbidden` |
+| `ScopeClaims.HasScope` always returns `true` | the 403 test + 4 `ScopeAuthorizationTests`; anonymous requests still got 401 because each scope policy also requires an authenticated user |
+| Removed the fallback policy | `AuthorizationOptions_FallbackPolicy_RequiresAuthenticatedUser` |
+| Removed `[AllowAnonymous]` from `GET /api/pets/{id}` | `ControllerEndpoints_HaveExplicitAuthorizationMetadata` + the public GET tests |
+
+The first run found a gap: removing the fallback policy failed no test, and with `HasScope` broken, requests with no token reached the write endpoints. Fixed in `f0896bb` (`RequireAuthenticatedUser()` on every scope policy and the deny-by-default tests).
