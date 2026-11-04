@@ -91,8 +91,9 @@ namespace Animal.UnitTests.Api
             var request = NewPet();
             request.ShelterId = 99;
 
-            var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _service.CreatePetAsync(request));
-            Assert.Contains("Shelter 99 does not exist.", ex.Errors);
+            var ex = await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreatePetAsync(request));
+            Assert.Equal(nameof(Shelter), ex.EntityName);
+            Assert.Equal(99, ex.Id);
             Assert.Equal(0, _unitOfWork.SaveCount);
         }
 
@@ -129,6 +130,18 @@ namespace Animal.UnitTests.Api
         }
 
         [Fact]
+        public async Task DeletePetAsync_WithOpenApplication_ThrowsConflictAndDoesNotSave()
+        {
+            _pets.OpenApplicationPetIds.Add(1);
+
+            var ex = await Assert.ThrowsAsync<EntityConflictException>(() => _service.DeletePetAsync(1));
+
+            Assert.Contains("open adoption application", ex.Message);
+            Assert.Single(_pets.Items);
+            Assert.Equal(0, _unitOfWork.SaveCount);
+        }
+
+        [Fact]
         public async Task DeletePetAsync_Missing_ThrowsNotFound()
         {
             await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.DeletePetAsync(999));
@@ -138,6 +151,7 @@ namespace Animal.UnitTests.Api
         private sealed class FakePetRepository : IPetRepository
         {
             public List<Pet> Items { get; } = [];
+            public HashSet<int> OpenApplicationPetIds { get; } = [];
             public PetSearchCriteria? LastCriteria { get; private set; }
 
             public Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
@@ -152,6 +166,9 @@ namespace Animal.UnitTests.Api
                 LastCriteria = criteria;
                 return Task.FromResult(Items.ToList());
             }
+
+            public Task<bool> HasOpenApplicationAsync(int petId, CancellationToken cancellationToken = default) =>
+                Task.FromResult(OpenApplicationPetIds.Contains(petId));
 
             public void Add(Pet pet)
             {

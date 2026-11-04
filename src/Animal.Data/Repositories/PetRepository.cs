@@ -1,5 +1,6 @@
 using Animal.Data.Context;
 using Animal.Domain.Entities;
+using Animal.Domain.Enums;
 using Animal.Domain.Queries;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,6 +43,13 @@ namespace Animal.Data.Repositories
             }
 
             return query.OrderBy(p => p.Id).ToListAsync(cancellationToken);
+        }
+
+        public Task<bool> HasOpenApplicationAsync(int petId, CancellationToken cancellationToken = default)
+        {
+            return Context.AdoptionApplications
+                .AsNoTracking()
+                .AnyAsync(a => a.PetId == petId && a.Status == AdoptionStatus.Pending, cancellationToken);
         }
     }
 }

@@ -8,5 +8,6 @@ namespace Animal.Data.Repositories
     {
         Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<List<Pet>> SearchAsync(PetSearchCriteria criteria, CancellationToken cancellationToken = default);
+        Task<bool> HasOpenApplicationAsync(int petId, CancellationToken cancellationToken = default);
     }
 }

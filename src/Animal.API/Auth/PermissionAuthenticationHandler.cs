@@ -35,10 +35,16 @@ namespace Animal.API.Auth
             }
 
             var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, "test-user") };
-            if (token.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Contains("shelters.write", StringComparer.OrdinalIgnoreCase))
+            var permissions = token.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            if (permissions.Contains("shelters.write", StringComparer.OrdinalIgnoreCase))
             {
                 claims.Add(new Claim("permission", "shelters.write"));
+            }
+
+            if (permissions.Contains("pets.write", StringComparer.OrdinalIgnoreCase))
+            {
+                claims.Add(new Claim("permission", "pets.write"));
             }
 
             var identity = new ClaimsIdentity(claims, Scheme.Name);

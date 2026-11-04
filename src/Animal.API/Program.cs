@@ -24,6 +24,11 @@ builder.Services.AddAuthentication("Permission")
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy("pets.write", policy =>
+    {
+        policy.RequireClaim("permission", "pets.write");
+    });
+
     options.AddPolicy("shelters.write", policy =>
     {
         policy.RequireClaim("permission", "shelters.write");

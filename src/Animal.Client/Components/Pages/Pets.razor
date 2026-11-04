@@ -1,12 +1,16 @@
 @page "/pets"
 @rendermode InteractiveServer
 @inject PetsApiClient Api
+@inject ClientPermissions Permissions
 
 <PageTitle>Pets</PageTitle>
 
 <div class="page-heading">
     <h1>Pets</h1>
-    <a class="button" href="pets/new">Add a pet</a>
+    @if (Permissions.CanWritePets)
+    {
+        <a class="button" href="pets/new">Add a pet</a>
+    }
 </div>
 
 <form class="filters" @onsubmit="SearchAsync" @onsubmit:preventDefault>
@@ -49,31 +53,37 @@ else
                 <th>Age</th>
                 <th>Status</th>
                 <th>Shelter</th>
-                <th></th>
+                @if (Permissions.CanWritePets)
+                {
+                    <th></th>
+                }
             </tr>
         </thead>
         <tbody>
             @foreach (var pet in _pets)
             {
                 <tr>
-                    <td data-label="Name">@pet.Name</td>
+                    <td data-label="Name"><a href="pets/@pet.Id">@pet.Name</a></td>
                     <td data-label="Species">@pet.Species</td>
                     <td data-label="Breed">@pet.Breed</td>
                     <td data-label="Age">@pet.Age</td>
                     <td data-label="Status">@(pet.IsAvailable ? "Available" : "Adopted")</td>
                     <td data-label="Shelter">@pet.ShelterId</td>
-                    <td class="actions">
-                        <a href="pets/@pet.Id/edit">Edit</a>
-                        @if (_confirmDeleteId == pet.Id)
-                        {
-                            <button class="danger" @onclick="() => DeleteAsync(pet.Id)">Confirm delete</button>
-                            <button class="secondary" @onclick="() => _confirmDeleteId = null">Cancel</button>
-                        }
-                        else
-                        {
-                            <button class="secondary" @onclick="() => _confirmDeleteId = pet.Id">Delete</button>
-                        }
-                    </td>
+                    @if (Permissions.CanWritePets)
+                    {
+                        <td class="actions">
+                            <a href="pets/@pet.Id/edit">Edit</a>
+                            @if (_confirmDeleteId == pet.Id)
+                            {
+                                <button class="danger" @onclick="() => DeleteAsync(pet.Id)">Confirm delete</button>
+                                <button class="secondary" @onclick="() => _confirmDeleteId = null">Cancel</button>
+                            }
+                            else
+                            {
+                                <button class="secondary" @onclick="() => _confirmDeleteId = pet.Id">Delete</button>
+                            }
+                        </td>
+                    }
                 </tr>
             }
         </tbody>
