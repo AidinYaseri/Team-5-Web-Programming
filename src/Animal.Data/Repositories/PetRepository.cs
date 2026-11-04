@@ -5,31 +5,23 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Animal.Data.Repositories
 {
-    public class PetRepository : IPetRepository
+    public class PetRepository : GenericRepository<Pet>, IPetRepository
     {
-        private readonly AnimalDbContext _context;
-
-        public PetRepository(AnimalDbContext context)
+        public PetRepository(AnimalDbContext context) : base(context)
         {
-            _context = context;
         }
 
         // Tracked on purpose: the caller can change the pet and then save through IUnitOfWork.
         public Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         {
-            return _context.Pets.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
-        }
-
-        public Task<List<Pet>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            return _context.Pets.AsNoTracking().OrderBy(p => p.Id).ToListAsync(cancellationToken);
+            return Context.Pets.FirstOrDefaultAsync(p => p.Id == id, cancellationToken);
         }
 
         public Task<List<Pet>> SearchAsync(PetSearchCriteria criteria, CancellationToken cancellationToken = default)
         {
             ArgumentNullException.ThrowIfNull(criteria);
 
-            IQueryable<Pet> query = _context.Pets.AsNoTracking();
+            IQueryable<Pet> query = Context.Pets.AsNoTracking();
 
             var species = criteria.Species?.Trim();
             if (!string.IsNullOrEmpty(species))
@@ -50,18 +42,6 @@ namespace Animal.Data.Repositories
             }
 
             return query.OrderBy(p => p.Id).ToListAsync(cancellationToken);
-        }
-
-        public void Add(Pet pet)
-        {
-            ArgumentNullException.ThrowIfNull(pet);
-            _context.Pets.Add(pet);
-        }
-
-        public void Remove(Pet pet)
-        {
-            ArgumentNullException.ThrowIfNull(pet);
-            _context.Pets.Remove(pet);
         }
     }
 }
