@@ -1,0 +1,148 @@
+@page "/shelters/new"
+@page "/shelters/{Id:int}/edit"
+@rendermode InteractiveServer
+@inject SheltersApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Add a shelter" : "Edit shelter")</PageTitle>
+
+<h1>@(IsNew ? "Add a shelter" : "Edit shelter")</h1>
+
+@if (_notFound)
+{
+    <p>That shelter doesn't exist. <a href="shelters">Back to shelters</a></p>
+}
+else if (_model is null)
+{
+    @if (_errors.Count > 0)
+    {
+        <ul class="error" role="alert">
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="SaveAsync" class="pet-form" FormName="shelter">
+        <DataAnnotationsValidator />
+
+        <label>
+            Name
+            <InputText @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </label>
+        <label>
+            Address
+            <InputText @bind-Value="_model.Address" />
+            <ValidationMessage For="() => _model.Address" />
+        </label>
+        <label>
+            Phone number
+            <InputText @bind-Value="_model.PhoneNumber" />
+            <ValidationMessage For="() => _model.PhoneNumber" />
+        </label>
+        <label>
+            Email
+            <InputText @bind-Value="_model.Email" />
+            <ValidationMessage For="() => _model.Email" />
+        </label>
+
+        @if (_errors.Count > 0)
+        {
+            <ul class="error" role="alert">
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+
+        <div class="form-actions">
+            <button type="submit" disabled="@_saving">@(_saving ? "Saving..." : "Save")</button>
+            <a class="button secondary" href="shelters">Cancel</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool IsNew => Id is null;
+
+    private ShelterRequest? _model;
+    private bool _notFound;
+    private bool _saving;
+    private List<string> _errors = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _errors = [];
+        _notFound = false;
+
+        if (IsNew)
+        {
+            _model = new ShelterRequest();
+            return;
+        }
+
+        try
+        {
+            var shelter = await Api.GetShelterAsync(Id!.Value);
+            if (shelter is null)
+            {
+                _notFound = true;
+                return;
+            }
+
+            _model = ShelterRequest.FromResponse(shelter);
+        }
+        catch (ApiException ex)
+        {
+            _errors = [.. ex.Errors.DefaultIfEmpty(ex.Message)];
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _errors = [];
+        _saving = true;
+
+        try
+        {
+            if (IsNew)
+            {
+                await Api.CreateShelterAsync(_model!);
+            }
+            else
+            {
+                await Api.UpdateShelterAsync(Id!.Value, _model!);
+            }
+
+            Navigation.NavigateTo("shelters");
+        }
+        catch (ApiException ex)
+        {
+            _errors = [.. ex.Errors.DefaultIfEmpty(ex.Message)];
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

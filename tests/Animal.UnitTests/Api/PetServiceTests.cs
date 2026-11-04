@@ -164,8 +164,26 @@ namespace Animal.UnitTests.Api
 
         private sealed class FakeShelterRepository(params int[] ids) : IShelterRepository
         {
+            private readonly List<Shelter> _items = ids.Select(id => new Shelter { Id = id, Name = $"Shelter {id}", Address = "Address", PhoneNumber = "+1 555 0100", Email = $"s{id}@example.org" }).ToList();
+
+            public Task<Shelter?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
+                Task.FromResult(_items.FirstOrDefault(s => s.Id == id));
+
+            public Task<List<Shelter>> GetAllAsync(CancellationToken cancellationToken = default) =>
+                Task.FromResult(_items.ToList());
+
+            public Task<List<Pet>> GetPetsAsync(int shelterId, CancellationToken cancellationToken = default) =>
+                Task.FromResult(new List<Pet>());
+
             public Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default) =>
                 Task.FromResult(ids.Contains(id));
+
+            public Task<bool> HasPetsAsync(int id, CancellationToken cancellationToken = default) =>
+                Task.FromResult(false);
+
+            public void Add(Shelter entity) => _items.Add(entity);
+
+            public void Remove(Shelter entity) => _items.Remove(entity);
         }
 
         private sealed class FakeUnitOfWork : IUnitOfWork

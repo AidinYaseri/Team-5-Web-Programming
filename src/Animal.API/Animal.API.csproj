@@ -11,11 +11,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Contracts\" />
-    <Folder Include="Controllers\" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\Animal.Domain\Animal.Domain.csproj" />
     <ProjectReference Include="..\Animal.Data\Animal.Data.csproj" />
   </ItemGroup>

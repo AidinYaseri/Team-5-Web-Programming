@@ -1,6 +1,8 @@
-﻿using Animal.API.ErrorHandling;
+﻿using Animal.API.Auth;
+using Animal.API.ErrorHandling;
 using Animal.API.Services;
 using Animal.Data;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +17,18 @@ builder.Services.AddAnimalData(connectionString);
 
 // Application services. Scoped, like the DbContext they use through the repositories.
 builder.Services.AddScoped<IPetService, PetService>();
+builder.Services.AddScoped<IShelterService, ShelterService>();
+
+builder.Services.AddAuthentication("Permission")
+    .AddScheme<AuthenticationSchemeOptions, PermissionAuthenticationHandler>("Permission", _ => { });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("shelters.write", policy =>
+    {
+        policy.RequireClaim("permission", "shelters.write");
+    });
+});
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
@@ -33,6 +47,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

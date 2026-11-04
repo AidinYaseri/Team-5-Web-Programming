@@ -85,7 +85,7 @@ namespace Animal.Client.Services
         //   model validation: "errors": { "Name": ["The Name field is required."] }
         //   domain rules:     "errors": ["Shelter 99 does not exist."]
         // Anything else falls back to "detail" or "title".
-        private static List<string> ReadProblemErrors(string body)
+        internal static List<string> ReadProblemErrors(string body)
         {
             var messages = new List<string>();
             if (string.IsNullOrWhiteSpace(body))

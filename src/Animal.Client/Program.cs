@@ -11,6 +11,7 @@ builder.Services.AddRazorComponents()
 var apiBaseUrl = builder.Configuration["AnimalApi:BaseUrl"]
     ?? throw new InvalidOperationException("AnimalApi:BaseUrl is missing from configuration.");
 builder.Services.AddHttpClient<PetsApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl));
+builder.Services.AddHttpClient<SheltersApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl));
 
 var app = builder.Build();
 

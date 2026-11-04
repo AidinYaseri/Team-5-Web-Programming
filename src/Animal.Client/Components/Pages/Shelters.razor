@@ -1,0 +1,108 @@
+@page "/shelters"
+@rendermode InteractiveServer
+@inject SheltersApiClient Api
+
+<PageTitle>Shelters</PageTitle>
+
+<div class="page-heading">
+    <h1>Shelters</h1>
+    <a class="button" href="shelters/new">Add a shelter</a>
+</div>
+
+@if (_error is not null)
+{
+    <p class="error" role="alert">@_error</p>
+}
+
+@if (_shelters is null)
+{
+    <p>Loading...</p>
+}
+else if (_shelters.Count == 0)
+{
+    <p>No shelters found.</p>
+}
+else
+{
+    <table class="pets">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Address</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var shelter in _shelters)
+            {
+                <tr>
+                    <td data-label="Name"><a href="shelters/@shelter.Id">@shelter.Name</a></td>
+                    <td data-label="Address">@shelter.Address</td>
+                    <td data-label="Phone">@shelter.PhoneNumber</td>
+                    <td data-label="Email">@shelter.Email</td>
+                    <td class="actions">
+                        <a href="shelters/@shelter.Id/edit">Edit</a>
+                        @if (_confirmDeleteId == shelter.Id)
+                        {
+                            <button class="danger" @onclick="() => DeleteAsync(shelter.Id)">Confirm delete</button>
+                            <button class="secondary" @onclick="() => _confirmDeleteId = null">Cancel</button>
+                        }
+                        else
+                        {
+                            <button class="secondary" @onclick="() => _confirmDeleteId = shelter.Id">Delete</button>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<ShelterResponse>? _shelters;
+    private int? _confirmDeleteId;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            _shelters = await Api.GetSheltersAsync();
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _shelters = [];
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+            _shelters = [];
+        }
+    }
+
+    private async Task DeleteAsync(int id)
+    {
+        _confirmDeleteId = null;
+        _error = null;
+
+        try
+        {
+            await Api.DeleteShelterAsync(id);
+            _shelters?.RemoveAll(s => s.Id == id);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+        }
+    }
+}
