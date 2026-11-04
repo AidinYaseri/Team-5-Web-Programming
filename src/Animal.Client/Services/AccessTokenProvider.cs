@@ -20,6 +20,12 @@ namespace Animal.Client.Services
                 // During static rendering JS interop isn't available. Public pages can still call the API.
                 return null;
             }
+            catch (InvalidOperationException)
+            {
+                // Blazor Server also throws InvalidOperationException when prerendering hasn't become interactive yet.
+                // The unauthenticated pet browse endpoint remains usable during that first render.
+                return null;
+            }
         }
 
         public async Task RefreshAsync(CancellationToken cancellationToken = default)
