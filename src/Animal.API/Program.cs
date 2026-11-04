@@ -19,6 +19,7 @@ builder.Services.AddAnimalData(connectionString);
 
 // Application services. Scoped, like the DbContext they use through the repositories.
 builder.Services.AddScoped<IPetService, PetService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 builder.Services.AddProblemDetails();
