@@ -1,6 +1,19 @@
 # API Contract Sheet (Milestone 3)
 
-**Status: DRAFT.** The team reviews this before any slice starts (WI-1, task 5). Once it's agreed, backend and frontend can be built at the same time against it. To change a contract after that, update this file in a PR and tell whoever owns the client screen.
+**Status: DRAFT v2, waiting for sign-off on #12.** The team reviews this before any slice starts (WI-1). Once it's agreed, backend and frontend can be built at the same time against it. To change a contract after that, update this file in a PR and tell whoever owns the client screen.
+
+v2 matches the code on `feature/milestone-3-layered-service-development` (commit `bcfb7fe`). What changed from v1:
+- Error codes now match `DomainExceptionHandler`: a broken business rule is **400**, an invalid status change or a delete blocked by other records is **409**. `BusinessRuleException` was replaced by `DomainValidationException` and `InvalidStatusTransitionException`.
+- `PUT` returns **204** with no body, like the Pets code does.
+- Pet field lengths and the unknown-shelter error (400) match `CreatePetRequest` and `PetRules`. All five Pets endpoints now exist.
+- Shelter and user field lengths match the EF Core configurations.
+- Added the error body shapes and the enum-as-string setup that Adoptions and Appointments need.
+
+## Open decisions (answer on #12)
+
+1. **Update response:** keep `PUT` → 204 with no body (current code), or switch every slice to 200 with the updated `XxxResponse`?
+2. **Business rule errors:** keep 400 for every broken rule (current code), or use 409 for rules about the current state, like "pet is not available" or "slot already taken"? If 409, `DomainExceptionHandler` needs a separate exception type for those.
+3. **Scopes:** do the scope names below work with the identity provider we pick? Some providers want a prefix (for example `api://animal/pets.write`).
 
 ## Conventions (all slices)
 
@@ -11,12 +24,33 @@
 | DTO names | `XxxResponse` for output, `CreateXxxRequest` / `UpdateXxxRequest` for bodies, `XxxQuery` for query strings. They live in `Animal.API/Contracts`. Entities are never returned. |
 | Validation | Data annotations on request DTOs. A failure returns **400** `application/problem+json` with an `errors` map (automatic with `[ApiController]`). |
 | Not found | The service throws `EntityNotFoundException` → **404** ProblemDetails. |
-| Rule broken | The service throws `BusinessRuleException` → **409** ProblemDetails (e.g. adopting an unavailable pet). |
+| Rule broken | The service throws `DomainValidationException` → **400** ProblemDetails with an `errors` list (e.g. age out of range, shelter doesn't exist, pet not available). |
+| Wrong status | The service throws `InvalidStatusTransitionException` → **409** ProblemDetails (e.g. approving an application that isn't Pending). |
+| Blocked by other records | A Restrict foreign key stops the save → **409** ProblemDetails, without the database message (e.g. deleting a shelter that still has pets). |
 | Create | **201** with a `Location` header (`CreatedAtAction`) and the created `XxxResponse`. |
-| Update | **200** with the updated `XxxResponse`. |
+| Update | **204**, no body. See open decision 1. |
 | Delete / actions with no body | **204**. |
+| Enums in JSON | Sent as strings. `Program.cs` doesn't do this yet: the first slice with an enum in a DTO (Adoptions or Appointments) adds `JsonStringEnumConverter` in `AddControllers().AddJsonOptions(...)`. |
 | Auth | Bearer access token in `Authorization: Bearer <token>`. No token or a bad token → **401**. Valid token but missing scope → **403**. Scope names below are a proposal until the identity provider is picked (D2). |
 | Current user | Comes from the token's `sub` claim only, never from the body or a header. "Mine" routes filter by it. |
+
+### Error body shapes
+
+The client (`PetsApiClient.ReadProblemErrors`) already reads all three, so keep them as they are.
+
+```jsonc
+// 400 from [ApiController] model validation: errors is a map of field -> messages
+{ "title": "One or more validation errors occurred.", "status": 400,
+  "errors": { "Name": ["The Name field is required."] } }
+
+// 400 from a domain rule: errors is a list
+{ "title": "One or more business rules were broken.", "status": 400,
+  "errors": ["Shelter 99 does not exist."] }
+
+// 404 / 409: detail (when safe to show) and title
+{ "title": "The request conflicts with the current status.", "status": 409,
+  "detail": "Application 3 is Approved and can't be rejected." }
+```
 
 ## Scopes
 
@@ -40,11 +74,11 @@ Reading pets and shelters is **public** on purpose: adopters should be able to b
 |---|---|---|---|---|---|
 | GET | `/api/pets` | Public | `PetSearchQuery` (query) | 200 `PetResponse[]` | 400 |
 | GET | `/api/pets/{id}` | Public | — | 200 `PetResponse` | 404 |
-| POST | `/api/pets` | `pets.write` | `CreatePetRequest` | 201 `PetResponse` | 400, 401, 403, 404 (shelter) |
-| PUT | `/api/pets/{id}` | `pets.write` | `UpdatePetRequest` | 200 `PetResponse` | 400, 401, 403, 404 |
-| DELETE | `/api/pets/{id}` | `pets.write` | — | 204 | 401, 403, 404, 409 (has an open application) |
+| POST | `/api/pets` | `pets.write` | `CreatePetRequest` | 201 `PetResponse` | 400 (incl. shelter doesn't exist), 401, 403 |
+| PUT | `/api/pets/{id}` | `pets.write` | `UpdatePetRequest` | 204 | 400, 401, 403, 404 |
+| DELETE | `/api/pets/{id}` | `pets.write` | — | 204 | 401, 403, 404, 409 (has applications or appointments) |
 
-Only `GET /api/pets` exists so far. The DTOs below are already in `Animal.API/Contracts`.
+All five endpoints exist and are tested, but none are protected yet (401/403 come with WI-3). The DTOs below are in `Animal.API/Contracts`.
 
 ```jsonc
 // PetSearchQuery: every field optional
@@ -56,15 +90,15 @@ Only `GET /api/pets` exists so far. The DTOs below are already in `Animal.API/Co
 { "id": 1, "name": "Biscuit", "species": "Dog", "breed": "Beagle",
   "age": 3, "isAvailable": true, "shelterId": 1 }
 
-// CreatePetRequest: new pets are always available
-{ "name": "Biscuit",       // required, ≤ 50
+// CreatePetRequest
+{ "name": "Biscuit",       // required, ≤ 100
   "species": "Dog",        // required, ≤ 50
-  "breed": "Beagle",       // ≤ 50
+  "breed": "Beagle",       // optional, ≤ 100 (stored as "" when left out)
   "age": 3,                // 0–100
-  "shelterId": 1 }         // ≥ 1, must exist
+  "isAvailable": true,     // optional, defaults to true
+  "shelterId": 1 }         // ≥ 1, must exist (checked by PetService → 400)
 
-// UpdatePetRequest: same as create, plus
-{ ..., "isAvailable": false }
+// UpdatePetRequest: same fields, replaces all of them. isAvailable has no default here.
 ```
 
 ## Shelters (WI-7, Darcy)
@@ -75,7 +109,7 @@ Only `GET /api/pets` exists so far. The DTOs below are already in `Animal.API/Co
 | GET | `/api/shelters/{id}` | Public | — | 200 `ShelterResponse` | 404 |
 | GET | `/api/shelters/{id}/pets` | Public | — | 200 `PetResponse[]` | 404 |
 | POST | `/api/shelters` | `shelters.write` | `CreateShelterRequest` | 201 `ShelterResponse` | 400, 401, 403 |
-| PUT | `/api/shelters/{id}` | `shelters.write` | `UpdateShelterRequest` | 200 `ShelterResponse` | 400, 401, 403, 404 |
+| PUT | `/api/shelters/{id}` | `shelters.write` | `UpdateShelterRequest` | 204 | 400, 401, 403, 404 |
 | DELETE | `/api/shelters/{id}` | `shelters.write` | — | 204 | 401, 403, 404, 409 (still has pets) |
 
 ```jsonc
@@ -85,9 +119,11 @@ Only `GET /api/pets` exists so far. The DTOs below are already in `Animal.API/Co
 // CreateShelterRequest / UpdateShelterRequest
 { "name": "...",           // required, ≤ 100
   "address": "...",        // required, ≤ 200
-  "phoneNumber": "...",    // [Phone], ≤ 20
-  "email": "..." }         // [EmailAddress], ≤ 100
+  "phoneNumber": "...",    // required, [Phone], ≤ 20
+  "email": "..." }         // required, [EmailAddress], ≤ 254
 ```
+
+The `Shelters` table and `IShelterRepository.ExistsAsync` already exist (seeded with 2 fake shelters).
 
 ## Users (WI-8, Aiden)
 
@@ -96,7 +132,7 @@ Users are created on their first sign-in (or on the first `PUT /me`). The user i
 | Method | Route | Auth | Request | Success | Errors |
 |---|---|---|---|---|---|
 | GET | `/api/users/me` | `users.read` | — | 200 `UserResponse` | 401, 403, 404 (no profile yet) |
-| PUT | `/api/users/me` | `users.write` | `UpdateUserRequest` | 200 `UserResponse` | 400, 401, 403, 409 (email taken) |
+| PUT | `/api/users/me` | `users.write` | `UpdateUserRequest` | 204 | 400, 401, 403, 409 (email taken) |
 
 There is no "list all users" endpoint, so nobody can read other users' personal data.
 
@@ -106,24 +142,24 @@ There is no "list all users" endpoint, so nobody can read other users' personal 
 
 // UpdateUserRequest
 { "name": "...",           // required, ≤ 100
-  "email": "...",          // required, [EmailAddress], unique
-  "phoneNumber": "..." }   // [Phone], ≤ 20
+  "email": "...",          // required, [EmailAddress], ≤ 254, unique (index in UserConfiguration)
+  "phoneNumber": "..." }   // required, [Phone], ≤ 20
 ```
 
-> Open point for WI-8: `User.Id` is an `int`, but `sub` is a string. Add an `ExternalId` (string, unique) column to `User` to link them.
+> Open point for WI-8: `User.Id` is an `int`, but `sub` is a string. Add an `ExternalId` (string, unique) column to `User` to link them. That's a new migration.
 
 ## Adoptions (WI-9, Aiden)
 
 | Method | Route | Auth | Request | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/adoptions` | `adoptions.write` | `CreateAdoptionRequest` | 201 `AdoptionResponse` | 400, 401, 403, 404 (pet), 409 (pet unavailable / already applied) |
+| POST | `/api/adoptions` | `adoptions.write` | `CreateAdoptionRequest` | 201 `AdoptionResponse` | 400 (incl. pet not available, already applied), 401, 403, 404 (pet) |
 | GET | `/api/adoptions/mine` | `adoptions.read` | — | 200 `AdoptionResponse[]` | 401, 403 |
 | GET | `/api/adoptions/{id}` | `adoptions.read` (own) or `adoptions.review` | — | 200 `AdoptionResponse` | 401, 403, 404 |
 | GET | `/api/adoptions?status=Pending` | `adoptions.review` | `AdoptionQuery` | 200 `AdoptionResponse[]` | 400, 401, 403 |
 | POST | `/api/adoptions/{id}/approve` | `adoptions.review` | — | 204 | 401, 403, 404, 409 (not pending) |
 | POST | `/api/adoptions/{id}/reject` | `adoptions.review` | — | 204 | 401, 403, 404, 409 (not pending) |
 
-On approve: the pet becomes unavailable, other pending applications for that pet are rejected, and each applicant gets a notification.
+On approve: the pet becomes unavailable, other pending applications for that pet are rejected, and each applicant gets a notification. `AdoptionRules.Approve` and `AdoptionRules.Reject` already do the status checks and mark the pet unavailable; rejecting the other applications and the notifications are WI-9.
 
 ```jsonc
 // CreateAdoptionRequest: userId comes from the token, not the body
@@ -142,7 +178,7 @@ On approve: the pet becomes unavailable, other pending applications for that pet
 
 | Method | Route | Auth | Request | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/appointments` | `appointments.write` | `CreateAppointmentRequest` | 201 `AppointmentResponse` | 400, 401, 403, 404 (pet/shelter), 409 (slot taken / in the past) |
+| POST | `/api/appointments` | `appointments.write` | `CreateAppointmentRequest` | 201 `AppointmentResponse` | 400 (incl. date not in the future, slot taken), 401, 403, 404 (pet/shelter) |
 | GET | `/api/appointments/mine` | `appointments.read` | — | 200 `AppointmentResponse[]` | 401, 403 |
 | GET | `/api/appointments/{id}` | `appointments.read` (own) | — | 200 `AppointmentResponse` | 401, 403, 404 |
 | POST | `/api/appointments/{id}/cancel` | `appointments.write` (own) | — | 204 | 401, 403, 404, 409 (already cancelled/completed) |
@@ -150,7 +186,7 @@ On approve: the pet becomes unavailable, other pending applications for that pet
 ```jsonc
 // CreateAppointmentRequest
 { "petId": 1, "shelterId": 1,
-  "appointmentDate": "2026-11-03T14:00:00Z" }   // must be in the future
+  "appointmentDate": "2026-11-03T14:00:00Z" }   // must be in the future (AppointmentRules.EnsureCanSchedule)
 
 // AppointmentResponse
 { "id": 4, "petId": 1, "petName": "Biscuit", "shelterId": 1, "userId": 7,
@@ -180,3 +216,13 @@ Notifications are created **inside** the API by `IAdoptionService` and `IAppoint
 | `GET /api/pets`, `GET /api/pets/{id}`, `GET /api/shelters`, `GET /api/shelters/{id}`, `GET /api/shelters/{id}/pets` | Needs a bearer token with the scope listed in its table |
 
 The auth integration tests (WI-3) must cover at least one public endpoint and one protected endpoint per scope.
+
+## Sign-off
+
+Comment on #12 with "approved" or the changes you want, and answer the open decisions.
+
+| Member | Signed off |
+|---|---|
+| Aiden | ☐ |
+| Darcy | ☐ |
+| Chloe | ☐ |
