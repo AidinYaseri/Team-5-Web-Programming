@@ -63,11 +63,16 @@ namespace Animal.IntegrationTests.Api
 
         public HttpClient CreateAuthenticatedClient()
         {
+            return CreateAuthenticatedClient("test-subject", ["pets.write"]);
+        }
+
+        public HttpClient CreateAuthenticatedClient(string subject, IEnumerable<string> scopes)
+        {
             var client = CreateClient();
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue(
                     "Bearer",
-                    _tokenFactory.CreateToken(scopes: ["pets.write"]));
+                    _tokenFactory.CreateToken(subject: subject, scopes: scopes));
             return client;
         }
 

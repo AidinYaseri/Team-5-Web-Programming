@@ -248,7 +248,7 @@ namespace Animal.IntegrationTests.Api
             using (var scope = _factory.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
-                context.Users.Add(new User { Id = 1, Name = "Test User", Email = "test.user@example.com", PhoneNumber = "555-0199" });
+                context.Users.Add(new User { Id = 1, ExternalId = "pets-adoption-user", Name = "Test User", Email = "test.user@example.com", PhoneNumber = "555-0199" });
                 context.AdoptionApplications.Add(new AdoptionApplication { UserId = 1, PetId = 1, ApplicationDate = DateTime.UtcNow });
                 context.SaveChanges();
             }
