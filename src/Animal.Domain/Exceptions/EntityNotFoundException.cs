@@ -1,6 +1,5 @@
 namespace Animal.Domain.Exceptions
 {
-    // Thrown when an id doesn't match anything. Maps to 404.
     public class EntityNotFoundException : DomainException
     {
         public EntityNotFoundException(string entityName, int id)

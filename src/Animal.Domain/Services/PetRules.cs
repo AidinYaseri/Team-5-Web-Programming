@@ -1,29 +1,65 @@
 using Animal.Domain.Entities;
-using Animal.Domain.ValueObjects;
+using Animal.Domain.Exceptions;
 
 namespace Animal.Domain.Services
 {
-    // Pure pet rules with no I/O, so they can be unit tested and reused by any repository.
+    // Pure business rules for a pet. No database or HTTP here, only checks on the object in memory.
     public static class PetRules
     {
-        public const int MinAge = 0;
+        public const int MaxNameLength = 100;
+        public const int MaxSpeciesLength = 50;
+        public const int MaxBreedLength = 100;
         public const int MaxAge = 100;
 
-        // Species match is exact but ignores case and surrounding spaces (decided in Milestone 2, issue #7).
-        public static bool MatchesSpecies(Pet pet, string? species)
+        public static IReadOnlyList<string> Validate(Pet pet)
         {
-            var trimmed = species?.Trim();
-            return string.IsNullOrEmpty(trimmed)
-                || string.Equals(pet.Species, trimmed, StringComparison.OrdinalIgnoreCase);
+            ArgumentNullException.ThrowIfNull(pet);
+
+            var errors = new List<string>();
+
+            if (string.IsNullOrWhiteSpace(pet.Name))
+            {
+                errors.Add("Name is required.");
+            }
+            else if (pet.Name.Length > MaxNameLength)
+            {
+                errors.Add($"Name can't be longer than {MaxNameLength} characters.");
+            }
+
+            if (string.IsNullOrWhiteSpace(pet.Species))
+            {
+                errors.Add("Species is required.");
+            }
+            else if (pet.Species.Length > MaxSpeciesLength)
+            {
+                errors.Add($"Species can't be longer than {MaxSpeciesLength} characters.");
+            }
+
+            if (pet.Breed.Length > MaxBreedLength)
+            {
+                errors.Add($"Breed can't be longer than {MaxBreedLength} characters.");
+            }
+
+            if (pet.Age < 0 || pet.Age > MaxAge)
+            {
+                errors.Add($"Age must be between 0 and {MaxAge}.");
+            }
+
+            if (pet.ShelterId <= 0)
+            {
+                errors.Add("A pet must belong to a shelter.");
+            }
+
+            return errors;
         }
 
-        public static bool Matches(Pet pet, PetSearchCriteria criteria)
+        public static void EnsureValid(Pet pet)
         {
-            ArgumentNullException.ThrowIfNull(criteria);
-
-            return MatchesSpecies(pet, criteria.Species)
-                && (!criteria.MaxAge.HasValue || pet.Age <= criteria.MaxAge.Value)
-                && (!criteria.AvailableOnly || pet.IsAvailable);
+            var errors = Validate(pet);
+            if (errors.Count > 0)
+            {
+                throw new DomainValidationException(errors);
+            }
         }
     }
 }

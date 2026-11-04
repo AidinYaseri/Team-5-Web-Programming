@@ -2,7 +2,7 @@ using Animal.Domain.Entities;
 
 namespace Animal.Data.SeedData
 {
-    // Fake pets used until the EF Core database exists. Not real animals or shelters.
+    // Fake pets seeded into the database through PetConfiguration. Not real animals.
     public static class PetSeedData
     {
         public static List<Pet> GetPets() =>

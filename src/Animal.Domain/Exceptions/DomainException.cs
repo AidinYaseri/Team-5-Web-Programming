@@ -1,6 +1,6 @@
 namespace Animal.Domain.Exceptions
 {
-    // Base class for errors caused by breaking a business rule. The API maps these to 4xx responses.
+    // Base type for errors raised by the domain, so the API can map them to HTTP status codes in one place.
     public abstract class DomainException : Exception
     {
         protected DomainException(string message) : base(message)

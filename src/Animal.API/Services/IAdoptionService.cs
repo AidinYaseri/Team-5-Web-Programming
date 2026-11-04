@@ -1,14 +1,15 @@
-using Animal.Domain.Entities;
+﻿using Animal.Domain.Entities;
 
 namespace Animal.API.Services
 {
-    // Not implemented yet. The slice owner switches these to the DTOs in docs/milestone-3/api-contracts.md.
+    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
+    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
     public interface IAdoptionService
     {
-        Task<AdoptionApplication> GetApplicationAsync(int id, CancellationToken cancellationToken = default);
-        Task<List<AdoptionApplication>> GetApplicationsAsync(CancellationToken cancellationToken = default);
-        Task<AdoptionApplication> CreateApplicationAsync(AdoptionApplication application, CancellationToken cancellationToken = default);
-        Task ApproveApplicationAsync(int id, CancellationToken cancellationToken = default);
-        Task RejectApplicationAsync(int id, CancellationToken cancellationToken = default);
+        AdoptionApplication GetApplication(int id);
+        List<AdoptionApplication> GetApplications();
+        AdoptionApplication CreateApplication(AdoptionApplication application);
+        void ApproveApplication(int id);
+        void RejectApplication(int id);
     }
 }

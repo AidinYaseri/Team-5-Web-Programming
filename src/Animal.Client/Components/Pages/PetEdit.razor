@@ -1,0 +1,157 @@
+@page "/pets/new"
+@page "/pets/{Id:int}/edit"
+@rendermode InteractiveServer
+@inject PetsApiClient Api
+@inject NavigationManager Navigation
+
+<PageTitle>@(IsNew ? "Add a pet" : "Edit pet")</PageTitle>
+
+<h1>@(IsNew ? "Add a pet" : "Edit pet")</h1>
+
+@if (_notFound)
+{
+    <p>That pet doesn't exist. <a href="pets">Back to the list</a></p>
+}
+else if (_model is null)
+{
+    @if (_errors.Count > 0)
+    {
+        <ul class="error" role="alert">
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="SaveAsync" class="pet-form" FormName="pet">
+        <DataAnnotationsValidator />
+
+        <label>
+            Name
+            <InputText @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </label>
+        <label>
+            Species
+            <InputText @bind-Value="_model.Species" placeholder="Dog, Cat, Rabbit..." />
+            <ValidationMessage For="() => _model.Species" />
+        </label>
+        <label>
+            Breed
+            <InputText @bind-Value="_model.Breed" />
+            <ValidationMessage For="() => _model.Breed" />
+        </label>
+        <label>
+            Age (years)
+            <InputNumber @bind-Value="_model.Age" min="0" max="100" />
+            <ValidationMessage For="() => _model.Age" />
+        </label>
+        <label>
+            Shelter ID
+            <InputNumber @bind-Value="_model.ShelterId" min="1" />
+            <ValidationMessage For="() => _model.ShelterId" />
+        </label>
+        <label class="checkbox">
+            <InputCheckbox @bind-Value="_model.IsAvailable" />
+            Available for adoption
+        </label>
+
+        @if (_errors.Count > 0)
+        {
+            <ul class="error" role="alert">
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+
+        <div class="form-actions">
+            <button type="submit" disabled="@_saving">@(_saving ? "Saving..." : "Save")</button>
+            <a class="button secondary" href="pets">Cancel</a>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int? Id { get; set; }
+
+    private bool IsNew => Id is null;
+
+    private PetRequest? _model;
+    private bool _notFound;
+    private bool _saving;
+    private List<string> _errors = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _errors = [];
+        _notFound = false;
+
+        if (IsNew)
+        {
+            _model = new PetRequest();
+            return;
+        }
+
+        try
+        {
+            var pet = await Api.GetPetAsync(Id!.Value);
+            if (pet is null)
+            {
+                _notFound = true;
+                return;
+            }
+
+            _model = PetRequest.FromResponse(pet);
+        }
+        catch (ApiException ex)
+        {
+            _errors = [.. ex.Errors.DefaultIfEmpty(ex.Message)];
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _errors = [];
+        _saving = true;
+        try
+        {
+            if (IsNew)
+            {
+                await Api.CreatePetAsync(_model!);
+            }
+            else
+            {
+                await Api.UpdatePetAsync(Id!.Value, _model!);
+            }
+
+            Navigation.NavigateTo("pets");
+        }
+        catch (ApiException ex)
+        {
+            // e.g. "Shelter 99 does not exist." from the API's domain check.
+            _errors = [.. ex.Errors.DefaultIfEmpty(ex.Message)];
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

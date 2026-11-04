@@ -1,19 +1,20 @@
 using System.ComponentModel.DataAnnotations;
-using Animal.Domain.Entities;
 
 namespace Animal.API.Contracts
 {
-    // Body for PUT /api/pets/{id}. Replaces every field.
+    // Body for PUT /api/pets/{id}. Replaces every field of the pet.
     public class UpdatePetRequest
     {
-        [Required, StringLength(50)]
+        [Required]
+        [StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
-        [Required, StringLength(50)]
+        [Required]
+        [StringLength(50)]
         public string Species { get; set; } = string.Empty;
 
-        [StringLength(50)]
-        public string Breed { get; set; } = string.Empty;
+        [StringLength(100)]
+        public string? Breed { get; set; }
 
         [Range(0, 100)]
         public int Age { get; set; }
@@ -22,16 +23,5 @@ namespace Animal.API.Contracts
 
         [Range(1, int.MaxValue)]
         public int ShelterId { get; set; }
-
-        public Pet ToPet(int id) => new()
-        {
-            Id = id,
-            Name = Name.Trim(),
-            Species = Species.Trim(),
-            Breed = Breed.Trim(),
-            Age = Age,
-            IsAvailable = IsAvailable,
-            ShelterId = ShelterId
-        };
     }
 }
