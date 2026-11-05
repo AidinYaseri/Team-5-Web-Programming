@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feature/milestone-3-layered-service-development]
 
 permissions:
   contents: read

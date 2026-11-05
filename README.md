@@ -69,7 +69,13 @@ Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [s
 
 ## Run locally
 
-Install the .NET 10 SDK. Start SQL Server/LocalDB and configure the API connection string if the default LocalDB instance is unavailable.
+Prerequisites (each machine, once):
+
+- **.NET 10 SDK.** Check with `dotnet --list-sdks`; a .NET 8 SDK alone gives `NETSDK1045`. Install with `winget install Microsoft.DotNet.SDK.10` or from https://aka.ms/dotnet/download.
+- **SQL Server Express LocalDB** (comes with Visual Studio, or install `SqlLocalDB.msi` from the SQL Server Express download → *Download Media* → *LocalDB*). Check with `sqllocaldb info`. Without it the API answers 500 on every database call. To use another SQL Server, set `ConnectionStrings__AnimalDb` instead.
+- **EF Core tools 10:** `dotnet tool install --global dotnet-ef --version 10.0.12` (or `update` if an older version is installed).
+
+If a build fails with `The file is locked by: "Animal.API (...)"`, stop the running API first.
 
 Restore and build the solution:
 
@@ -112,7 +118,7 @@ Set the provider's API scopes with `Authentication:Scopes` and align the API's `
 EF Core mappings are in `src/Animal.Data/Configurations`; migrations are in `src/Animal.Data/Migrations`. Apply migrations with:
 
 ```powershell
-dotnet ef database update --project src/Animal.Data --startup-project src/Animal.API
+dotnet ef database update --project src/Animal.Data --startup-project src/Animal.Data
 ```
 
 Run the test suite with:

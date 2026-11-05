@@ -1,3 +1,4 @@
+using Animal.API.Authorization;
 using Animal.API.Contracts;
 using Animal.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,13 +11,13 @@ namespace Animal.API.Controllers
     public sealed class NotificationsController(INotificationService notifications, ICurrentUser currentUser) : ControllerBase
     {
         [HttpGet]
-        [Authorize(Policy = "notifications.read")]
+        [Authorize(Policy = AuthorizationPolicies.NotificationsRead)]
         [ProducesResponseType<IReadOnlyList<NotificationResponse>>(StatusCodes.Status200OK)]
         public Task<IReadOnlyList<NotificationResponse>> Get([FromQuery] bool unreadOnly = false, CancellationToken cancellationToken = default) =>
             notifications.GetForUserAsync(currentUser.UserId, unreadOnly, cancellationToken);
 
         [HttpPost("{id:int}/read")]
-        [Authorize(Policy = "notifications.read")]
+        [Authorize(Policy = AuthorizationPolicies.NotificationsRead)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken)

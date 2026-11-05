@@ -1,3 +1,4 @@
+using Animal.API.Authorization;
 using Animal.API.Contracts;
 using Animal.API.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,13 +11,13 @@ namespace Animal.API.Controllers
     public sealed class AppointmentsController(IAppointmentService appointments, ICurrentUser currentUser) : ControllerBase
     {
         [HttpGet]
-        [Authorize(Policy = "appointments.read")]
+        [Authorize(Policy = AuthorizationPolicies.AppointmentsRead)]
         [ProducesResponseType<IReadOnlyList<AppointmentResponse>>(StatusCodes.Status200OK)]
         public Task<IReadOnlyList<AppointmentResponse>> GetMine(CancellationToken cancellationToken) =>
             appointments.GetForUserAsync(currentUser.UserId, cancellationToken);
 
         [HttpPost]
-        [Authorize(Policy = "appointments.write")]
+        [Authorize(Policy = AuthorizationPolicies.AppointmentsWrite)]
         [ProducesResponseType<AppointmentResponse>(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -28,7 +29,7 @@ namespace Animal.API.Controllers
         }
 
         [HttpPost("{id:int}/cancel")]
-        [Authorize(Policy = "appointments.write")]
+        [Authorize(Policy = AuthorizationPolicies.AppointmentsWrite)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
