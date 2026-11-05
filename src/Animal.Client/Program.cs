@@ -10,8 +10,13 @@ builder.Services.AddRazorComponents()
 // The client only talks to Animal.API over HTTP. Change AnimalApi:BaseUrl if the API runs somewhere else.
 var apiBaseUrl = builder.Configuration["AnimalApi:BaseUrl"]
     ?? throw new InvalidOperationException("AnimalApi:BaseUrl is missing from configuration.");
+// UI-only: decides which buttons to show. The API still checks every request with a real access token.
+var clientPermissions = ClientPermissions.FromString(builder.Configuration["AnimalApi:Permissions"]);
+builder.Services.AddSingleton(clientPermissions);
+
 builder.Services.AddHttpClient<PetsApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl));
 builder.Services.AddHttpClient<UsersApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl));
+builder.Services.AddHttpClient<SheltersApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl));
 
 var app = builder.Build();
 

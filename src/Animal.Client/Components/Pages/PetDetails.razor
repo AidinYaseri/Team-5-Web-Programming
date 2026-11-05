@@ -1,0 +1,72 @@
+@page "/pets/{Id:int}"
+@rendermode InteractiveServer
+@inject PetsApiClient Api
+@inject ClientPermissions Permissions
+
+<PageTitle>Pet details</PageTitle>
+
+@if (_notFound)
+{
+    <p>That pet doesn't exist. <a href="/pets">Back to pets</a></p>
+}
+else if (_pet is null)
+{
+    @if (_error is not null)
+    {
+        <p class="error" role="alert">@_error</p>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+}
+else
+{
+    <div class="page-heading">
+        <h1>@_pet.Name</h1>
+        @if (Permissions.CanWritePets)
+        {
+            <a class="button" href="/pets/@_pet.Id/edit">Edit</a>
+        }
+    </div>
+
+    <p><strong>Species:</strong> @_pet.Species</p>
+    <p><strong>Breed:</strong> @_pet.Breed</p>
+    <p><strong>Age:</strong> @_pet.Age</p>
+    <p><strong>Status:</strong> @(_pet.IsAvailable ? "Available" : "Adopted")</p>
+    <p><strong>Shelter ID:</strong> @_pet.ShelterId</p>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private PetResponse? _pet;
+    private bool _notFound;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _notFound = false;
+        _error = null;
+
+        try
+        {
+            _pet = await Api.GetPetAsync(Id);
+            if (_pet is null)
+            {
+                _notFound = true;
+            }
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _pet = null;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+            _pet = null;
+        }
+    }
+}

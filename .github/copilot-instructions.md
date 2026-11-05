@@ -113,3 +113,13 @@ Before considering a change done:
 - Follow Research, Plan, Implement, Validate. Use `.github/prompts/prime-issue.prompt.md` to research and restate the issue, then `.github/prompts/create-plan.prompt.md` in a fresh session to write the plan. Implement one plan step at a time and check in after each one. Don't accept one big unreviewed change.
 - Before opening a PR, run the build and tests from section 4. After opening it, run `.github/prompts/review-pr.prompt.md` and record each finding as fixed or deferred in the PR.
 - Milestone notes (issue, plan, test evidence, review record, reflection) go in `docs/milestone-2/`.
+
+## 8. WI-5 Agents and skills
+
+- #file:'.github/agents/domain-dev.agent.md'
+- #file:'.github/agents/data-persistence.agent.md'
+- #file:'.github/agents/api-service.agent.md'
+- #file:'.github/agents/frontend-dev.agent.md'
+- #file:'.github/agents/testing.agent.md'
+- #file:'.github/agents/code-review.agent.md'
+- #file:'skills/testing/SKILL.md'

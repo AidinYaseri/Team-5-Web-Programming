@@ -91,8 +91,9 @@ namespace Animal.UnitTests.Api
             var request = NewPet();
             request.ShelterId = 99;
 
-            var ex = await Assert.ThrowsAsync<DomainValidationException>(() => _service.CreatePetAsync(request));
-            Assert.Contains("Shelter 99 does not exist.", ex.Errors);
+            var ex = await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreatePetAsync(request));
+            Assert.Equal(nameof(Shelter), ex.EntityName);
+            Assert.Equal(99, ex.Id);
             Assert.Equal(0, _unitOfWork.SaveCount);
         }
 
@@ -129,6 +130,18 @@ namespace Animal.UnitTests.Api
         }
 
         [Fact]
+        public async Task DeletePetAsync_WithOpenApplication_ThrowsConflictAndDoesNotSave()
+        {
+            _pets.OpenApplicationPetIds.Add(1);
+
+            var ex = await Assert.ThrowsAsync<EntityConflictException>(() => _service.DeletePetAsync(1));
+
+            Assert.Contains("open adoption application", ex.Message);
+            Assert.Single(_pets.Items);
+            Assert.Equal(0, _unitOfWork.SaveCount);
+        }
+
+        [Fact]
         public async Task DeletePetAsync_Missing_ThrowsNotFound()
         {
             await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.DeletePetAsync(999));
@@ -138,6 +151,7 @@ namespace Animal.UnitTests.Api
         private sealed class FakePetRepository : IPetRepository
         {
             public List<Pet> Items { get; } = [];
+            public HashSet<int> OpenApplicationPetIds { get; } = [];
             public PetSearchCriteria? LastCriteria { get; private set; }
 
             public Task<Pet?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
@@ -153,6 +167,9 @@ namespace Animal.UnitTests.Api
                 return Task.FromResult(Items.ToList());
             }
 
+            public Task<bool> HasOpenApplicationAsync(int petId, CancellationToken cancellationToken = default) =>
+                Task.FromResult(OpenApplicationPetIds.Contains(petId));
+
             public void Add(Pet pet)
             {
                 pet.Id = Items.Count == 0 ? 1 : Items.Max(p => p.Id) + 1;
@@ -164,8 +181,26 @@ namespace Animal.UnitTests.Api
 
         private sealed class FakeShelterRepository(params int[] ids) : IShelterRepository
         {
+            private readonly List<Shelter> _items = ids.Select(id => new Shelter { Id = id, Name = $"Shelter {id}", Address = "Address", PhoneNumber = "+1 555 0100", Email = $"s{id}@example.org" }).ToList();
+
+            public Task<Shelter?> GetByIdAsync(int id, CancellationToken cancellationToken = default) =>
+                Task.FromResult(_items.FirstOrDefault(s => s.Id == id));
+
+            public Task<List<Shelter>> GetAllAsync(CancellationToken cancellationToken = default) =>
+                Task.FromResult(_items.ToList());
+
+            public Task<List<Pet>> GetPetsAsync(int shelterId, CancellationToken cancellationToken = default) =>
+                Task.FromResult(new List<Pet>());
+
             public Task<bool> ExistsAsync(int id, CancellationToken cancellationToken = default) =>
                 Task.FromResult(ids.Contains(id));
+
+            public Task<bool> HasPetsAsync(int id, CancellationToken cancellationToken = default) =>
+                Task.FromResult(false);
+
+            public void Add(Shelter entity) => _items.Add(entity);
+
+            public void Remove(Shelter entity) => _items.Remove(entity);
         }
 
         private sealed class FakeUnitOfWork : IUnitOfWork

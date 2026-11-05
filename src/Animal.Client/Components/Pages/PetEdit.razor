@@ -2,13 +2,18 @@
 @page "/pets/{Id:int}/edit"
 @rendermode InteractiveServer
 @inject PetsApiClient Api
+@inject ClientPermissions Permissions
 @inject NavigationManager Navigation
 
 <PageTitle>@(IsNew ? "Add a pet" : "Edit pet")</PageTitle>
 
 <h1>@(IsNew ? "Add a pet" : "Edit pet")</h1>
 
-@if (_notFound)
+@if (!Permissions.CanWritePets)
+{
+    <p>You don't have permission to edit pets. <a href="/pets">Back to pets</a></p>
+}
+else if (_notFound)
 {
     <p>That pet doesn't exist. <a href="pets">Back to the list</a></p>
 }
@@ -95,6 +100,12 @@ else
     {
         _errors = [];
         _notFound = false;
+
+        if (!Permissions.CanWritePets)
+        {
+            _model = null;
+            return;
+        }
 
         if (IsNew)
         {

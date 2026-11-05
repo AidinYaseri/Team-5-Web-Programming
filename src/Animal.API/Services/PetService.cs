@@ -85,6 +85,8 @@ namespace Animal.API.Services
         {
             var pet = await FindPetAsync(id, cancellationToken);
 
+            PetRules.EnsureCanDelete(id, await _pets.HasOpenApplicationAsync(id, cancellationToken));
+
             _pets.Remove(pet);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
@@ -102,7 +104,7 @@ namespace Animal.API.Services
 
             if (!await _shelters.ExistsAsync(pet.ShelterId, cancellationToken))
             {
-                throw new DomainValidationException($"Shelter {pet.ShelterId} does not exist.");
+                throw new EntityNotFoundException(nameof(Shelter), pet.ShelterId);
             }
         }
     }

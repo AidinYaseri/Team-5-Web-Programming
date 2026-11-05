@@ -44,6 +44,12 @@ namespace Animal.API.ErrorHandling
                     Title = "The request conflicts with existing data.",
                     Detail = ex.Message
                 },
+                EntityConflictException ex => new ProblemDetails
+                {
+                    Status = StatusCodes.Status409Conflict,
+                    Title = "The request conflicts with existing data.",
+                    Detail = ex.Message
+                },
                 // Usually a foreign key, e.g. deleting a pet that still has adoption applications.
                 // The database message is not sent back because it describes the schema.
                 DbUpdateException => new ProblemDetails
