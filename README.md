@@ -65,7 +65,7 @@ sequenceDiagram
     API-->>Client: JSON response
 ```
 
-Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [services-class-diagram.mmd](docs/diagrams/services-class-diagram.mmd). The database diagram is available at [database-diagram.png](docs/diagrams/database-diagram.png).
+Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [services-class-diagram.mmd](docs/diagrams/services-class-diagram.mmd). The database diagram is [database-diagram.png](docs/diagrams/database-diagram.png) (source: [database-diagram.mmd](docs/diagrams/database-diagram.mmd)). To re-render the PNGs after changing a `.mmd` file, use https://mermaid.live or `npx @mermaid-js/mermaid-cli -i <file>.mmd -o <file>.png`.
 
 ## Run locally
 
