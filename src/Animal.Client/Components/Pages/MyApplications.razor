@@ -1,0 +1,54 @@
+@page "/applications"
+@rendermode InteractiveServer
+@inject AdoptionsApiClient Api
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AccessTokenProvider AccessTokenProvider
+
+<PageTitle>My applications</PageTitle>
+<h1>My adoption applications</h1>
+<AuthorizeView>
+    <Authorized>
+        @if (_error is not null) { <p class="error" role="alert">@_error</p> }
+        @if (_applications is null) { <p>Loading applications…</p> }
+        else if (_applications.Count == 0) { <p>You haven't applied for a pet yet. <a href="/pets">Browse pets</a> to find one.</p> }
+        else
+        {
+            <ul class="appointment-list">
+                @foreach (var application in _applications)
+                {
+                    <li>
+                        <p><a href="/pets/@application.PetId">@application.PetName</a> · applied @application.ApplicationDate.ToLocalTime().ToString("d")</p>
+                        <p>Status: <strong>@application.Status</strong></p>
+                    </li>
+                }
+            </ul>
+        }
+    </Authorized>
+    <NotAuthorized><p><a href="/auth/login">Sign in</a> to see your applications.</p></NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<AdoptionResponse>? _applications;
+    private string? _error;
+    private bool _loaded;
+
+    // Protected calls wait for the interactive render, when the access token can be read (see AccessTokenProvider).
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+        if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+        {
+            await AccessTokenProvider.RefreshAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _applications = (await Api.GetMineAsync()).ToList(); _error = null; }
+        catch (ApiException ex) { _error = ex.Message; _applications = []; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; _applications = []; }
+    }
+}

@@ -1,0 +1,132 @@
+@page "/profile"
+@rendermode InteractiveServer
+@inject UsersApiClient Api
+
+<PageTitle>My profile</PageTitle>
+
+<h1>My profile</h1>
+
+@if (_unauthorized)
+{
+    <p role="alert">Please sign in to see your profile.</p>
+}
+else if (_model is null)
+{
+    @if (_errors.Count > 0)
+    {
+        <ul class="error" role="alert">
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="SaveAsync" class="profile-form" FormName="profile">
+        <DataAnnotationsValidator />
+
+        <label>
+            Name
+            <InputText @bind-Value="_model.Name" />
+            <ValidationMessage For="() => _model.Name" />
+        </label>
+        <label>
+            Email
+            <InputText @bind-Value="_model.Email" type="email" />
+            <ValidationMessage For="() => _model.Email" />
+        </label>
+        <label>
+            Phone number
+            <InputText @bind-Value="_model.PhoneNumber" type="tel" />
+            <ValidationMessage For="() => _model.PhoneNumber" />
+        </label>
+
+        @if (_errors.Count > 0)
+        {
+            <ul class="error" role="alert">
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        }
+
+        <div class="form-actions">
+            <button type="submit" disabled="@_saving">@(_saving ? "Saving..." : "Save")</button>
+        </div>
+    </EditForm>
+}
+
+@code {
+    private UpdateUserRequest? _model;
+    private bool _unauthorized;
+    private bool _saving;
+    private List<string> _errors = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var profile = await Api.GetMyProfileAsync();
+            _model = profile is null
+                ? new UpdateUserRequest()
+                : UpdateUserRequest.FromResponse(profile);
+        }
+        catch (ApiException ex)
+        {
+            HandleApiError(ex);
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _errors = [];
+        _saving = true;
+
+        try
+        {
+            await Api.UpdateMyProfileAsync(_model!);
+        }
+        catch (ApiException ex)
+        {
+            HandleApiError(ex);
+        }
+        catch (HttpRequestException)
+        {
+            _errors = ["Can't reach the API. Is Animal.API running?"];
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void HandleApiError(ApiException exception)
+    {
+        if (exception.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            _unauthorized = true;
+            _model = null;
+            _errors = [];
+            return;
+        }
+
+        _errors = [.. exception.Errors.DefaultIfEmpty(
+            exception.StatusCode switch
+            {
+                System.Net.HttpStatusCode.BadRequest => "Please correct the highlighted profile information.",
+                System.Net.HttpStatusCode.Conflict => "That email address is already in use.",
+                _ => exception.Message
+            })];
+    }
+}

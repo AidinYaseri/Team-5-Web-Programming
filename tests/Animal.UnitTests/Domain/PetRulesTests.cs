@@ -99,5 +99,19 @@ namespace Animal.UnitTests.Domain
         {
             PetRules.EnsureValid(ValidPet());
         }
+
+        [Fact]
+        public void EnsureCanDelete_WithOpenApplication_ThrowsConflict()
+        {
+            var ex = Assert.Throws<EntityConflictException>(() => PetRules.EnsureCanDelete(1, hasOpenApplication: true));
+
+            Assert.Contains("open adoption application", ex.Message);
+        }
+
+        [Fact]
+        public void EnsureCanDelete_WithoutOpenApplication_DoesNotThrow()
+        {
+            PetRules.EnsureCanDelete(1, hasOpenApplication: false);
+        }
     }
 }

@@ -1,0 +1,92 @@
+@page "/applications/review"
+@rendermode InteractiveServer
+@inject AdoptionsApiClient Api
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AccessTokenProvider AccessTokenProvider
+
+<PageTitle>Review applications</PageTitle>
+<h1>Review adoption applications</h1>
+<AuthorizeView>
+    <Authorized>
+        @if (_message is not null) { <p role="status">@_message</p> }
+        @if (_error is not null) { <p class="error" role="alert">@_error</p> }
+        @if (_applications is null) { <p>Loading applications…</p> }
+        else if (_applications.Count == 0) { <p>No pending applications.</p> }
+        else
+        {
+            <ul class="appointment-list">
+                @foreach (var application in _applications)
+                {
+                    <li>
+                        <p><a href="/pets/@application.PetId">@application.PetName</a> · applicant #@application.UserId · applied @application.ApplicationDate.ToLocalTime().ToString("d")</p>
+                        @if (_confirm?.Id == application.Id)
+                        {
+                            <button class="danger" disabled="@_busy" @onclick="ConfirmAsync">Confirm @(_confirm.Value.Approve ? "approval" : "rejection")</button>
+                            <button class="secondary" disabled="@_busy" @onclick="() => _confirm = null">Cancel</button>
+                        }
+                        else
+                        {
+                            <button disabled="@_busy" @onclick="() => _confirm = (application.Id, true)">Approve</button>
+                            <button class="secondary" disabled="@_busy" @onclick="() => _confirm = (application.Id, false)">Reject</button>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </Authorized>
+    <NotAuthorized><p><a href="/auth/login">Sign in</a> with a shelter staff account to review applications.</p></NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<AdoptionResponse>? _applications;
+    private (int Id, bool Approve)? _confirm;
+    private string? _error;
+    private string? _message;
+    private bool _busy;
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+        if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+        {
+            await AccessTokenProvider.RefreshAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        // Accounts without adoptions.review get 403 from the API, shown through ApiException as a readable message.
+        try { _applications = (await Api.GetQueueAsync("Pending")).ToList(); _error = null; }
+        catch (ApiException ex) { _error = ex.Message; _applications = []; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; _applications = []; }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (_confirm is not { } choice) return;
+        _busy = true;
+        _message = null;
+        try
+        {
+            if (choice.Approve)
+            {
+                await Api.ApproveAsync(choice.Id);
+                _message = "Approved. The pet is now adopted and the other applicants were notified.";
+            }
+            else
+            {
+                await Api.RejectAsync(choice.Id);
+                _message = "Rejected. The applicant was notified.";
+            }
+            _confirm = null;
+            await LoadAsync();
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; }
+        finally { _busy = false; }
+    }
+}

@@ -25,7 +25,7 @@ namespace Animal.UnitTests.Domain
             var pet = AvailablePet();
             pet.IsAvailable = false;
 
-            Assert.Throws<DomainValidationException>(() => AdoptionRules.EnsureCanApply(pet));
+            Assert.Throws<EntityConflictException>(() => AdoptionRules.EnsureCanApply(pet));
         }
 
         [Fact]
@@ -59,7 +59,7 @@ namespace Animal.UnitTests.Domain
             var pet = AvailablePet();
             pet.IsAvailable = false;
 
-            Assert.Throws<DomainValidationException>(() => AdoptionRules.Approve(application, pet));
+            Assert.Throws<EntityConflictException>(() => AdoptionRules.Approve(application, pet));
             Assert.Equal(AdoptionStatus.Pending, application.Status);
         }
 
@@ -70,6 +70,20 @@ namespace Animal.UnitTests.Domain
             pet.Id = 2;
 
             Assert.Throws<ArgumentException>(() => AdoptionRules.Approve(PendingApplication(), pet));
+        }
+
+        [Fact]
+        public void EnsureNotAlreadyApplied_NoPendingApplication_DoesNotThrow()
+        {
+            AdoptionRules.EnsureNotAlreadyApplied(false);
+        }
+
+        [Fact]
+        public void EnsureNotAlreadyApplied_PendingApplication_ThrowsConflict()
+        {
+            var ex = Assert.Throws<EntityConflictException>(() => AdoptionRules.EnsureNotAlreadyApplied(true));
+
+            Assert.Contains("already have a pending application", ex.Message);
         }
 
         [Fact]

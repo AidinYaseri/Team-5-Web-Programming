@@ -1,5 +1,7 @@
 using Animal.Data.Context;
 using Animal.Domain.Entities;
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -9,6 +11,8 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Protocols;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
 namespace Animal.IntegrationTests.Api
 {
@@ -18,6 +22,7 @@ namespace Animal.IntegrationTests.Api
     {
         // Kept open for the factory's lifetime: an in-memory SQLite database disappears when its last connection closes.
         private readonly SqliteConnection _connection = new("DataSource=:memory:");
+        private readonly TestTokenFactory _tokenFactory = new();
 
         public AnimalApiFactory()
         {
@@ -32,8 +37,63 @@ namespace Animal.IntegrationTests.Api
                 services.RemoveAll<DbContextOptions<AnimalDbContext>>();
                 services.RemoveAll<IDbContextOptionsConfiguration<AnimalDbContext>>();
                 services.AddDbContext<AnimalDbContext>(options => options.UseSqlite(_connection));
+                services.PostConfigure<JwtBearerOptions>(
+                    JwtBearerDefaults.AuthenticationScheme,
+                    options =>
+                {
+                    var signingKey = _tokenFactory.SigningKey;
+                    var configuration = new OpenIdConnectConfiguration
+                    {
+                        Issuer = TestTokenFactory.Issuer
+                    };
+                    configuration.SigningKeys.Add(signingKey);
+
+                    options.Authority = TestTokenFactory.Issuer;
+                    options.Audience = TestTokenFactory.Audience;
+                    options.RequireHttpsMetadata = false;
+                    options.ConfigurationManager =
+                        new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
+                    options.TokenValidationParameters.ValidIssuer = TestTokenFactory.Issuer;
+                    options.TokenValidationParameters.ValidAudience = TestTokenFactory.Audience;
+                    options.TokenValidationParameters.IssuerSigningKey = signingKey;
+                    options.TokenValidationParameters.IssuerSigningKeys = [signingKey];
+                });
             });
         }
+
+        public HttpClient CreateAuthenticatedClient()
+        {
+            return CreateAuthenticatedClient("test-subject", ["pets.write"]);
+        }
+
+        public HttpClient CreateAuthenticatedClient(string subject, IEnumerable<string> scopes)
+        {
+            var client = CreateClient();
+            client.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue(
+                    "Bearer",
+                    _tokenFactory.CreateToken(subject: subject, scopes: scopes));
+            return client;
+        }
+
+        public string CreateToken(
+            string? issuer = null,
+            string? audience = null,
+            DateTimeOffset? expiresAt = null,
+            string? subject = "test-subject",
+            IEnumerable<string>? scopes = null,
+            string scopeClaimType = "scope",
+            RSA? signingKey = null,
+            IEnumerable<System.Security.Claims.Claim>? extraClaims = null) =>
+            _tokenFactory.CreateToken(
+                issuer,
+                audience,
+                expiresAt,
+                subject,
+                scopes,
+                scopeClaimType,
+                signingKey,
+                extraClaims);
 
         // Builds the schema and the HasData seed rows (2 shelters, 5 pets) once the host exists.
         protected override IHost CreateHost(IHostBuilder builder)
@@ -59,12 +119,49 @@ namespace Animal.IntegrationTests.Api
             context.SaveChanges();
         }
 
+        // Replaces users, notifications and appointments with the given rows (and removes adoption applications,
+        // which also point at users). A user without an ExternalId gets
+        // its id as the ExternalId, so a test token with sub = "41" maps to user 41.
+        public void ResetUserData(IEnumerable<User> users, IEnumerable<Notification>? notifications = null, IEnumerable<Appointment>? appointments = null)
+        {
+            using var scope = Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+
+            context.Notifications.RemoveRange(context.Notifications);
+            context.Appointments.RemoveRange(context.Appointments);
+            context.AdoptionApplications.RemoveRange(context.AdoptionApplications);
+            context.Users.RemoveRange(context.Users);
+            context.SaveChanges();
+
+            var userRows = users.ToList();
+            foreach (var user in userRows.Where(user => string.IsNullOrWhiteSpace(user.ExternalId)))
+            {
+                user.ExternalId = user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            context.Users.AddRange(userRows);
+            context.SaveChanges();
+
+            if (notifications is not null)
+            {
+                context.Notifications.AddRange(notifications);
+            }
+
+            if (appointments is not null)
+            {
+                context.Appointments.AddRange(appointments);
+            }
+
+            context.SaveChanges();
+        }
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
 
             if (disposing)
             {
+                _tokenFactory.Dispose();
                 _connection.Dispose();
             }
         }

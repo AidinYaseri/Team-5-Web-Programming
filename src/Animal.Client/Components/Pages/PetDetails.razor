@@ -1,0 +1,116 @@
+@page "/pets/{Id:int}"
+@rendermode InteractiveServer
+@inject PetsApiClient Api
+@inject AdoptionsApiClient AdoptionsApi
+
+<PageTitle>Pet details</PageTitle>
+
+@if (_notFound)
+{
+    <p>That pet doesn't exist. <a href="/pets">Back to pets</a></p>
+}
+else if (_pet is null)
+{
+    @if (_error is not null)
+    {
+        <p class="error" role="alert">@_error</p>
+    }
+    else
+    {
+        <p>Loading pet…</p>
+    }
+}
+else
+{
+    <div class="page-heading">
+        <h1>@_pet.Name</h1>
+        @* The button only shows for signed-in users; the API still requires the pets.write scope. *@
+        <AuthorizeView>
+            <Authorized>
+                <a class="button" href="/pets/@_pet.Id/edit">Edit</a>
+            </Authorized>
+        </AuthorizeView>
+    </div>
+
+    <dl class="details">
+        <dt>Species</dt><dd>@_pet.Species</dd>
+        <dt>Breed</dt><dd>@(string.IsNullOrWhiteSpace(_pet.Breed) ? "Not listed" : _pet.Breed)</dd>
+        <dt>Age</dt><dd>@_pet.Age</dd>
+        <dt>Status</dt><dd>@(_pet.IsAvailable ? "Available" : "Adopted")</dd>
+        <dt>Shelter</dt><dd>@_pet.ShelterId</dd>
+    </dl>
+    @if (_pet.IsAvailable)
+    {
+        <p>
+            <a class="button" href="/pets/@_pet.Id/visit">Book a visit</a>
+            <AuthorizeView>
+                <Authorized>
+                    <button disabled="@_applying" @onclick="ApplyAsync">@(_applying ? "Sending…" : "Apply to adopt")</button>
+                </Authorized>
+            </AuthorizeView>
+        </p>
+    }
+    @if (_applyMessage is not null)
+    {
+        <p role="status">@_applyMessage <a href="/applications">See my applications</a></p>
+    }
+    @if (_applyError is not null)
+    {
+        <p class="error" role="alert">@_applyError</p>
+    }
+    <p><a href="/pets">Back to pets</a></p>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private PetResponse? _pet;
+    private bool _notFound;
+    private string? _error;
+    private bool _applying;
+    private string? _applyMessage;
+    private string? _applyError;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _notFound = false;
+        _error = null;
+
+        try
+        {
+            _pet = await Api.GetPetAsync(Id);
+            if (_pet is null)
+            {
+                _notFound = true;
+            }
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _pet = null;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+            _pet = null;
+        }
+    }
+
+    // The API takes the applicant from the access token. 409 means the pet is taken or you already applied.
+    private async Task ApplyAsync()
+    {
+        if (_pet is null) return;
+        _applying = true;
+        _applyMessage = null;
+        _applyError = null;
+        try
+        {
+            await AdoptionsApi.ApplyAsync(_pet.Id);
+            _applyMessage = $"Your application for {_pet.Name} was sent.";
+        }
+        catch (ApiException ex) { _applyError = ex.Message; }
+        catch (HttpRequestException) { _applyError = "Can't reach the API. Is Animal.API running?"; }
+        finally { _applying = false; }
+    }
+}

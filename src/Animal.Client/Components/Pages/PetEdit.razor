@@ -8,7 +8,11 @@
 
 <h1>@(IsNew ? "Add a pet" : "Edit pet")</h1>
 
-@if (_notFound)
+@if (!_signedIn)
+{
+    <p>Please sign in to add or edit pets. <a href="/pets">Back to pets</a></p>
+}
+else if (_notFound)
 {
     <p>That pet doesn't exist. <a href="pets">Back to the list</a></p>
 }
@@ -87,6 +91,10 @@ else
     private bool IsNew => Id is null;
 
     private PetRequest? _model;
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private bool _signedIn;
     private bool _notFound;
     private bool _saving;
     private List<string> _errors = [];
@@ -95,6 +103,15 @@ else
     {
         _errors = [];
         _notFound = false;
+
+        // Only signed-in users see the form. The API still checks the pets.write scope and answers 403 without it.
+        var authState = await AuthenticationStateTask;
+        _signedIn = authState.User.Identity?.IsAuthenticated == true;
+        if (!_signedIn)
+        {
+            _model = null;
+            return;
+        }
 
         if (IsNew)
         {

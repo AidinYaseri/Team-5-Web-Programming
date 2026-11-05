@@ -1,15 +1,16 @@
-﻿using Animal.Domain.Entities;
+using Animal.API.Contracts;
 
 namespace Animal.API.Services
 {
-    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
-    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
     public interface IUserService
     {
-        User GetUser(int id);
-        List<User> GetUsers();
-        User CreateUser(User user);
-        void UpdateUser(User user);
-        void DeleteUser(int id);
+        Task<UserResponse> GetMyProfileAsync(
+            string subject,
+            CancellationToken cancellationToken = default);
+
+        Task CreateOrUpdateMyProfileAsync(
+            string subject,
+            UpdateUserRequest request,
+            CancellationToken cancellationToken = default);
     }
 }

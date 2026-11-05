@@ -1,54 +1,65 @@
 classDiagram
     direction LR
+
     class IPetService {
         <<interface>>
-        +GetPet(id) Pet
-        +GetPets() List~Pet~
-        +GetAvailablePets() List~Pet~
-        +SearchPets(criteria) List~Pet~
-        +CreatePet(pet) Pet
-        +UpdatePet(pet)
-        +DeletePet(id)
-    }
-    class IShelterService {
-        <<interface>>
-        +GetShelter(id) Shelter
-        +GetShelters() List~Shelter~
-        +CreateShelter(shelter) Shelter
-        +UpdateShelter(shelter)
-        +DeleteShelter(id)
-    }
-    class IUserService {
-        <<interface>>
-        +GetUser(id) User
-        +GetUsers() List~User~
-        +CreateUser(user) User
-        +UpdateUser(user)
-        +DeleteUser(id)
-    }
-    class IAdoptionService {
-        <<interface>>
-        +GetApplication(id) AdoptionApplication
-        +GetApplications() List~AdoptionApplication~
-        +CreateApplication(application) AdoptionApplication
-        +ApproveApplication(id)
-        +RejectApplication(id)
+        +SearchPetsAsync(query, token) Task~List~PetResponse~~
+        +GetPetAsync(id, token) Task~PetResponse~
+        +CreatePetAsync(request, token) Task~PetResponse~
+        +UpdatePetAsync(id, request, token) Task
+        +DeletePetAsync(id, token) Task
     }
     class IAppointmentService {
         <<interface>>
-        +GetAppointment(id) Appointment
-        +GetAppointments() List~Appointment~
-        +CreateAppointment(appointment) Appointment
-        +UpdateAppointment(appointment)
-        +CancelAppointment(id)
+        +GetForUserAsync(userId, token) Task~IReadOnlyList~AppointmentResponse~~
+        +CreateAsync(userId, request, token) Task~AppointmentResponse~
+        +CancelAsync(userId, id, token) Task~bool~
     }
     class INotificationService {
         <<interface>>
-        +GetNotification(id) Notification
-        +GetNotifications() List~Notification~
-        +CreateNotification(notification) Notification
-        +MarkAsRead(id)
+        +GetForUserAsync(userId, unreadOnly, token) Task~IReadOnlyList~NotificationResponse~~
+        +CreateAsync(userId, message, token) Task
+        +MarkAsReadAsync(userId, id, token) Task~bool~
     }
-    IAdoptionService ..> IPetService : uses
-    IAdoptionService ..> INotificationService : uses
-    IAppointmentService ..> INotificationService : uses
+    class PetService
+    class AppointmentService
+    class NotificationService
+    class SubjectToUserIdClaimsTransformation {
+        +TransformAsync(principal) ClaimsPrincipal
+    }
+    class HttpCurrentUser {
+        +UserId int
+    }
+    class IUserRepository {
+        <<interface>>
+        +GetByExternalIdAsync(sub, token) Task~User~
+    }
+    class UserRepository
+    class IUnitOfWork {
+        <<interface>>
+        +SaveChangesAsync(token) Task~int~
+    }
+    class IAppointmentRepository {
+        <<interface>>
+        +GetForUserAsync(userId, token)
+        +GetForUserAsync(userId, appointmentId, token)
+        +IsSlotTakenAsync(shelterId, date, token)
+    }
+    class INotificationRepository {
+        <<interface>>
+        +GetForUserAsync(userId, unreadOnly, token)
+        +GetForUserAsync(userId, notificationId, token)
+        +Add(notification)
+    }
+
+    IPetService <|.. PetService
+    IAppointmentService <|.. AppointmentService
+    INotificationService <|.. NotificationService
+    IUserRepository <|.. UserRepository
+    AppointmentService --> IAppointmentRepository
+    AppointmentService --> INotificationService : creates booking updates
+    AppointmentService --> IUnitOfWork : saves appointment and notification once
+    NotificationService --> INotificationRepository
+    NotificationService --> IUnitOfWork : saves read status changes
+    SubjectToUserIdClaimsTransformation --> IUserRepository : maps sub to ExternalId
+    HttpCurrentUser --> SubjectToUserIdClaimsTransformation : reads local-user claim

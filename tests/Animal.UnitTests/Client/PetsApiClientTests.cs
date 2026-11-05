@@ -109,8 +109,24 @@ namespace Animal.UnitTests.Client
 
             var ex = await Assert.ThrowsAsync<ApiException>(() => _client.DeletePetAsync(1));
 
-            Assert.Empty(ex.Errors);
-            Assert.Equal("The API returned 502.", ex.Message);
+            Assert.Equal(["The service returned 502."], ex.Errors);
+            Assert.Equal("The service returned 502.", ex.Message);
+        }
+
+        [Theory]
+        [InlineData(HttpStatusCode.BadRequest, "Check the information and try again.")]
+        [InlineData(HttpStatusCode.Unauthorized, "Sign in to continue.")]
+        [InlineData(HttpStatusCode.Forbidden, "Your account doesn't have permission for this action.")]
+        [InlineData(HttpStatusCode.NotFound, "The requested item could not be found.")]
+        [InlineData(HttpStatusCode.Conflict, "This action conflicts with the current information.")]
+        [InlineData(HttpStatusCode.InternalServerError, "The service had a problem. Try again later.")]
+        public async Task ErrorWithoutProblemBody_UsesReadableStatusMessage(HttpStatusCode status, string message)
+        {
+            _handler.Respond(status, "");
+
+            var ex = await Assert.ThrowsAsync<ApiException>(() => _client.DeletePetAsync(1));
+
+            Assert.Equal(message, ex.Message);
         }
 
         private sealed class FakeHandler : HttpMessageHandler

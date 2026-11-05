@@ -1,5 +1,7 @@
+using Animal.API.Authorization;
 using Animal.API.Contracts;
 using Animal.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Animal.API.Controllers
@@ -19,6 +21,7 @@ namespace Animal.API.Controllers
 
         // GET api/pets?species=dog&maxAge=5&availableOnly=true
         [HttpGet]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<ActionResult<IEnumerable<PetResponse>>> GetPets([FromQuery] PetSearchQuery query, CancellationToken cancellationToken)
@@ -28,6 +31,7 @@ namespace Animal.API.Controllers
 
         // GET api/pets/5
         [HttpGet("{id:int}")]
+        [AllowAnonymous]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PetResponse>> GetPet(int id, CancellationToken cancellationToken)
@@ -37,8 +41,12 @@ namespace Animal.API.Controllers
 
         // POST api/pets
         [HttpPost]
+        [Authorize(Policy = AuthorizationPolicies.PetsWrite)]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<PetResponse>> CreatePet(CreatePetRequest request, CancellationToken cancellationToken)
         {
             var pet = await _petService.CreatePetAsync(request, cancellationToken);
@@ -47,8 +55,11 @@ namespace Animal.API.Controllers
 
         // PUT api/pets/5
         [HttpPut("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.PetsWrite)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> UpdatePet(int id, UpdatePetRequest request, CancellationToken cancellationToken)
         {
@@ -58,7 +69,10 @@ namespace Animal.API.Controllers
 
         // DELETE api/pets/5
         [HttpDelete("{id:int}")]
+        [Authorize(Policy = AuthorizationPolicies.PetsWrite)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> DeletePet(int id, CancellationToken cancellationToken)
