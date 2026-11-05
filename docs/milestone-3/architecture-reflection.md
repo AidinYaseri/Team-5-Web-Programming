@@ -2,11 +2,13 @@
 
 ## Frontend — Chloe
 
-We kept the client in the stack already present in the repository: ASP.NET Core Blazor Server on .NET 10. It lets the team build the UI and typed HTTP clients in C#, while keeping the client as a separate project with no references to `Animal.Domain` or `Animal.Data`. The client reaches the API over HTTP and owns copies of the public request and response contracts.
+We chose ASP.NET Core Blazor Server on .NET 10, matching the .NET stack already used by the API. Keeping `Animal.Client` as a separate project let us build the UI and typed HTTP clients in C# without referencing `Animal.Domain` or `Animal.Data`. The client owns copies of the public request and response contracts and reaches backend data only through the REST API.
 
-Sign-in is designed around the OIDC authorization-code flow with PKCE. The OIDC exchange runs on the server; a client secret, if the chosen provider requires one, belongs in server-side user-secrets or environment configuration. The API access token is forwarded by a shared HTTP handler. This choice fits the existing .NET solution and avoids adding a second frontend build toolchain. The trade-off is that UI interactions depend on the server-side Blazor circuit and the client needs an identity provider configured before sign-in can work end to end.
+The client includes pet browsing, filtering, details and editing, visit booking, an appointments list, and notifications. Typed API clients centralize serialization and status handling. The pages distinguish loading, empty, API-error, and unreachable-API states so a failed request can be explained without exposing an unhandled exception as the page's only feedback.
 
-The frontend development agent supports the existing Razor/Blazor stack and requires HTTP-only API access, validation, loading and error states. The testing agent confines its changes to `tests/` and calls out deterministic test data. Those constraints shaped the implementation and test additions. The API resolves the validated token's `sub` to `User.ExternalId` and adds an internal local-user claim; real protected flows still need the identity-provider issuer, audience, and client settings configured.
+Sign-in uses the OIDC authorization-code flow with PKCE. The code exchange and any client secret stay server-side; a shared HTTP handler attaches the access token to API requests. The API resolves the validated token's `sub` through the unique `User.ExternalId` value and supplies an internal local-user claim to owner-scoped endpoints. This avoids depending on a provider sending the application's numeric database ID.
+
+The main trade-off is the server-side Blazor circuit: interactive pages depend on the client process remaining available, and every API-backed screen depends on the API being started as well. The README documents both terminal and Visual Studio startup. End-to-end sign-in still needs the team's identity-provider Authority, Audience, ClientId, and scopes configured; the committed defaults intentionally contain no provider-specific credentials. The frontend and testing agents reinforced the existing Blazor choice, HTTP-only boundary, readable error states, and deterministic API tests.
 
 ## Persistence — Chloe draft, pending Darcy's notes
 
