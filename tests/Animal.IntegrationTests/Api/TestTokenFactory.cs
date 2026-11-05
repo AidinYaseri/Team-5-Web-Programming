@@ -21,9 +21,10 @@ public sealed class TestTokenFactory : IDisposable
         string? subject = "test-subject",
         IEnumerable<string>? scopes = null,
         string scopeClaimType = "scope",
-        RSA? signingKey = null)
+        RSA? signingKey = null,
+        IEnumerable<Claim>? extraClaims = null)
     {
-        var claims = new List<Claim>();
+        var claims = new List<Claim>(extraClaims ?? []);
         if (subject is not null)
         {
             claims.Add(new Claim("sub", subject));

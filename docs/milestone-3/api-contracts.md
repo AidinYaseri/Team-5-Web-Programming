@@ -24,7 +24,7 @@ v2 matches the code on `feature/milestone-3-layered-service-development` (commit
 | DTO names | `XxxResponse` for output, `CreateXxxRequest` / `UpdateXxxRequest` for bodies, `XxxQuery` for query strings. They live in `Animal.API/Contracts`. Entities are never returned. |
 | Validation | Data annotations on request DTOs. A failure returns **400** `application/problem+json` with an `errors` map (automatic with `[ApiController]`). |
 | Not found | The service throws `EntityNotFoundException` → **404** ProblemDetails. |
-| Rule broken | The service throws `DomainValidationException` → **400** ProblemDetails with an `errors` list (e.g. age out of range, shelter doesn't exist, pet not available). |
+| Rule broken | The service throws `DomainValidationException` → **400** ProblemDetails with an `errors` list (e.g. age out of range, pet not available). |
 | Wrong status | The service throws `InvalidStatusTransitionException` → **409** ProblemDetails (e.g. approving an application that isn't Pending). |
 | Blocked by other records | A Restrict foreign key stops the save → **409** ProblemDetails, without the database message (e.g. deleting a shelter that still has pets). |
 | Create | **201** with a `Location` header (`CreatedAtAction`) and the created `XxxResponse`. |
@@ -74,7 +74,7 @@ Reading pets and shelters is **public** on purpose: adopters should be able to b
 |---|---|---|---|---|---|
 | GET | `/api/pets` | Public | `PetSearchQuery` (query) | 200 `PetResponse[]` | 400 |
 | GET | `/api/pets/{id}` | Public | — | 200 `PetResponse` | 404 |
-| POST | `/api/pets` | `pets.write` | `CreatePetRequest` | 201 `PetResponse` | 400 (incl. shelter doesn't exist), 401, 403 |
+| POST | `/api/pets` | `pets.write` | `CreatePetRequest` | 201 `PetResponse` | 400, 401, 403, 404 (shelter doesn't exist, per WI-6) |
 | PUT | `/api/pets/{id}` | `pets.write` | `UpdatePetRequest` | 204 | 400, 401, 403, 404 |
 | DELETE | `/api/pets/{id}` | `pets.write` | — | 204 | 401, 403, 404, 409 (has applications or appointments) |
 
@@ -96,7 +96,7 @@ All five endpoints exist and are tested, but none are protected yet (401/403 com
   "breed": "Beagle",       // optional, ≤ 100 (stored as "" when left out)
   "age": 3,                // 0–100
   "isAvailable": true,     // optional, defaults to true
-  "shelterId": 1 }         // ≥ 1, must exist (checked by PetService → 400)
+  "shelterId": 1 }         // ≥ 1, must exist (checked by PetService → 404, per WI-6)
 
 // UpdatePetRequest: same fields, replaces all of them. isAvailable has no default here.
 ```
@@ -146,7 +146,7 @@ There is no "list all users" endpoint, so nobody can read other users' personal 
   "phoneNumber": "..." }   // required, [Phone], ≤ 20
 ```
 
-> Open point for WI-8: `User.Id` is an `int`, but `sub` is a string. Add an `ExternalId` (string, unique) column to `User` to link them. That's a new migration.
+The provider's opaque `sub` is stored in the unique `User.ExternalId` column (migration `AddUserExternalId`, WI-8). `SubjectToUserIdClaimsTransformation` looks it up on each request and adds the local `Users.Id` as a `local_user_id` claim, so services that work on the caller's own rows (appointments, notifications, adoptions) use `ICurrentUser.UserId`. Those policies also require that mapping, so a signed-in user without a profile gets 403 until they `PUT /api/users/me`.
 
 ## Adoptions (WI-9, Aiden)
 
@@ -178,7 +178,7 @@ On approve: the pet becomes unavailable, other pending applications for that pet
 
 | Method | Route | Auth | Request | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/appointments` | `appointments.write` | `CreateAppointmentRequest` | 201 `AppointmentResponse` | 400 (incl. date not in the future, slot taken), 401, 403, 404 (pet/shelter) |
+| POST | `/api/appointments` | `appointments.write` | `CreateAppointmentRequest` | 201 `AppointmentResponse` | 400, 401, 403, 404 (pet/shelter), 409 (date not in the future or slot taken, per WI-10) |
 | GET | `/api/appointments/mine` | `appointments.read` | — | 200 `AppointmentResponse[]` | 401, 403 |
 | GET | `/api/appointments/{id}` | `appointments.read` (own) | — | 200 `AppointmentResponse` | 401, 403, 404 |
 | POST | `/api/appointments/{id}/cancel` | `appointments.write` (own) | — | 204 | 401, 403, 404, 409 (already cancelled/completed) |

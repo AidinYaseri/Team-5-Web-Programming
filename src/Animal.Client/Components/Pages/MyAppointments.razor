@@ -1,0 +1,71 @@
+@page "/appointments"
+@rendermode InteractiveServer
+@inject AppointmentsApiClient Api
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AccessTokenProvider AccessTokenProvider
+
+<PageTitle>My appointments</PageTitle>
+<h1>My appointments</h1>
+<AuthorizeView>
+    <Authorized>
+        @if (_error is not null) { <p class="error" role="alert">@_error</p> }
+        @if (_appointments is null) { <p>Loading appointments…</p> }
+        else if (_appointments.Count == 0) { <p>You have no appointments yet. <a href="/pets">Browse pets</a> to book a visit.</p> }
+        else
+        {
+            <ul class="appointment-list">
+                @foreach (var appointment in _appointments)
+                {
+                    <li>
+                        <p><a href="/pets/@appointment.PetId">Pet #@appointment.PetId</a> · @appointment.AppointmentDate.ToLocalTime().ToString("f")</p>
+                        <p>Status: @appointment.Status</p>
+                        @if (appointment.Status == "Scheduled")
+                        {
+                            @if (_confirmCancelId == appointment.Id)
+                            {
+                                <button class="danger" @onclick="() => CancelAsync(appointment.Id)">Confirm cancellation</button>
+                                <button class="secondary" @onclick="() => _confirmCancelId = null">Keep appointment</button>
+                            }
+                            else { <button class="secondary" @onclick="() => _confirmCancelId = appointment.Id">Cancel visit</button> }
+                        }
+                    </li>
+                }
+            </ul>
+        }
+    </Authorized>
+    <NotAuthorized><p><a href="/auth/login">Sign in</a> to view your appointments.</p></NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<AppointmentResponse>? _appointments;
+    private int? _confirmCancelId;
+    private string? _error;
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+        if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+        {
+            await AccessTokenProvider.RefreshAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        try { _appointments = (await Api.GetMineAsync()).ToList(); _error = null; }
+        catch (ApiException ex) { _error = ex.Message; _appointments = []; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; _appointments = []; }
+    }
+
+    private async Task CancelAsync(int id)
+    {
+        _confirmCancelId = null;
+        try { await Api.CancelAsync(id); await LoadAsync(); }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; }
+    }
+}

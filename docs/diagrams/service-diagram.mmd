@@ -1,43 +1,48 @@
-flowchart TB
-    Client(["Client<br/>(Swagger, .http file, front-end)"])
+flowchart LR
+    Browser[Browser]
+    Client[Animal.Client<br/>Blazor Server]
+    Identity[OIDC identity provider]
 
-    subgraph API["Animal.API  (Web API layer)"]
-        direction LR
-        PetsC[PetsController]
-        SheltersC[SheltersController]
-        UsersC[UsersController]
-        AdoptionsC[AdoptionsController]
-        AppointmentsC[AppointmentsController]
-        NotificationsC[NotificationsController]
+    subgraph API["Animal.API · REST endpoints"]
+        direction TB
+        Pets[PetsController]
+        Appointments[AppointmentsController]
+        Notifications[NotificationsController]
+        Auth[JWT bearer + scope policies]
+        Services[Application services]
     end
 
-    subgraph DOMAIN["Animal.Domain  (models + service interfaces)"]
-        direction LR
-        PetS[IPetService]
-        ShelterS[IShelterService]
-        UserS[IUserService]
-        AdoptionS[IAdoptionService]
-        AppointmentS[IAppointmentService]
-        NotificationS[INotificationService]
+    subgraph DOMAIN["Animal.Domain · entities and rules"]
+        PetRules[PetRules]
+        AppointmentRules[AppointmentRules]
+        NotificationRules[NotificationRules]
+        Entities[Pets · Shelters · Users<br/>Adoptions · Appointments · Notifications]
     end
 
-    subgraph DATA["Animal.Data  (EF Core)"]
-        direction LR
-        Repos["Repositories"]
-        Ctx["AnimalDbContext<br/>Configurations / Migrations / SeedData"]
+    subgraph DATA["Animal.Data · EF Core"]
+        Repos[Repositories]
+        UserRepo[UserRepository · ExternalId lookup]
+        UnitOfWork[IUnitOfWork]
+        Context[AnimalDbContext<br/>Configurations and migrations]
     end
 
-    DB[("SQL Server")]
+    Database[(SQL Server)]
 
-    Client -->|HTTP / JSON| API
-
-    PetsC --> PetS
-    SheltersC --> ShelterS
-    UsersC --> UserS
-    AdoptionsC --> AdoptionS
-    AppointmentsC --> AppointmentS
-    NotificationsC --> NotificationS
-
-    DOMAIN -->|implemented using| DATA
-    Repos --> Ctx
-    DATA -->|EF Core| DB
+    Browser <-->|interactive UI and sign-in cookie| Client
+    Client <-->|OIDC authorization code + PKCE| Identity
+    Client -->|HTTP / JSON + bearer access token| API
+    Auth -->|validated sub| UserRepo
+    UserRepo -->|local user ID| Auth
+    Auth -->|authorized requests| Services
+    Pets --> Services
+    Appointments --> Services
+    Notifications --> Services
+    Services --> PetRules
+    Services --> AppointmentRules
+    Services --> NotificationRules
+    Services --> Entities
+    Services --> Repos
+    Services --> UnitOfWork
+    UnitOfWork -->|one save for related changes| Context
+    Repos --> Context
+    Context --> Database

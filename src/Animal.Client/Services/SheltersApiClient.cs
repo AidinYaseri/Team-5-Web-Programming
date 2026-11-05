@@ -16,7 +16,7 @@ namespace Animal.Client.Services
         public async Task<List<ShelterResponse>> GetSheltersAsync(CancellationToken cancellationToken = default)
         {
             using var response = await _http.GetAsync("api/shelters", cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
             return await response.Content.ReadFromJsonAsync<List<ShelterResponse>>(cancellationToken) ?? [];
         }
 
@@ -28,14 +28,14 @@ namespace Animal.Client.Services
                 return null;
             }
 
-            await EnsureSuccessAsync(response, cancellationToken);
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
             return await response.Content.ReadFromJsonAsync<ShelterResponse>(cancellationToken);
         }
 
         public async Task<List<PetResponse>> GetShelterPetsAsync(int id, CancellationToken cancellationToken = default)
         {
             using var response = await _http.GetAsync($"api/shelters/{id}/pets", cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
             return await response.Content.ReadFromJsonAsync<List<PetResponse>>(cancellationToken) ?? [];
         }
 
@@ -47,7 +47,7 @@ namespace Animal.Client.Services
             };
 
             using var response = await _http.SendAsync(message, cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
             return (await response.Content.ReadFromJsonAsync<ShelterResponse>(cancellationToken))!;
         }
 
@@ -59,7 +59,7 @@ namespace Animal.Client.Services
             };
 
             using var response = await _http.SendAsync(message, cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
         }
 
         public async Task DeleteShelterAsync(int id, CancellationToken cancellationToken = default)
@@ -67,18 +67,7 @@ namespace Animal.Client.Services
             using var message = new HttpRequestMessage(HttpMethod.Delete, $"api/shelters/{id}");
 
             using var response = await _http.SendAsync(message, cancellationToken);
-            await EnsureSuccessAsync(response, cancellationToken);
-        }
-
-        private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
-        {
-            if (response.IsSuccessStatusCode)
-            {
-                return;
-            }
-
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new ApiException(response.StatusCode, PetsApiClient.ReadProblemErrors(body));
+            await ApiResponse.EnsureSuccessAsync(response, cancellationToken);
         }
     }
 }

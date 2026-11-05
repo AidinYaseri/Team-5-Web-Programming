@@ -24,7 +24,7 @@ namespace Animal.UnitTests.Domain
             var appointment = ScheduledAppointment();
             appointment.AppointmentDate = Now;
 
-            Assert.Throws<DomainValidationException>(() => AppointmentRules.EnsureCanSchedule(appointment, Now));
+            Assert.Throws<AppointmentConflictException>(() => AppointmentRules.EnsureCanSchedule(appointment, Now));
         }
 
         [Fact]
@@ -33,7 +33,19 @@ namespace Animal.UnitTests.Domain
             var appointment = ScheduledAppointment();
             appointment.AppointmentDate = Now.AddMinutes(-1);
 
-            Assert.Throws<DomainValidationException>(() => AppointmentRules.EnsureCanSchedule(appointment, Now));
+            Assert.Throws<AppointmentConflictException>(() => AppointmentRules.EnsureCanSchedule(appointment, Now));
+        }
+
+        [Fact]
+        public void EnsureSlotIsAvailable_FreeSlot_DoesNotThrow()
+        {
+            AppointmentRules.EnsureSlotIsAvailable(false);
+        }
+
+        [Fact]
+        public void EnsureSlotIsAvailable_TakenSlot_ThrowsConflict()
+        {
+            Assert.Throws<AppointmentConflictException>(() => AppointmentRules.EnsureSlotIsAvailable(true));
         }
 
         [Fact]

@@ -1,15 +1,11 @@
-﻿using Animal.Domain.Entities;
+using Animal.API.Contracts;
 
 namespace Animal.API.Services
 {
-    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
-    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
     public interface IAppointmentService
     {
-        Appointment GetAppointment(int id);
-        List<Appointment> GetAppointments();
-        Appointment CreateAppointment(Appointment appointment);
-        void UpdateAppointment(Appointment appointment);
-        void CancelAppointment(int id);
+        Task<IReadOnlyList<AppointmentResponse>> GetForUserAsync(int userId, CancellationToken cancellationToken = default);
+        Task<AppointmentResponse> CreateAsync(int userId, CreateAppointmentRequest request, CancellationToken cancellationToken = default);
+        Task<bool> CancelAsync(int userId, int appointmentId, CancellationToken cancellationToken = default);
     }
 }

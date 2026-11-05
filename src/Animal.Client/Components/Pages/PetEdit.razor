@@ -2,16 +2,15 @@
 @page "/pets/{Id:int}/edit"
 @rendermode InteractiveServer
 @inject PetsApiClient Api
-@inject ClientPermissions Permissions
 @inject NavigationManager Navigation
 
 <PageTitle>@(IsNew ? "Add a pet" : "Edit pet")</PageTitle>
 
 <h1>@(IsNew ? "Add a pet" : "Edit pet")</h1>
 
-@if (!Permissions.CanWritePets)
+@if (!_signedIn)
 {
-    <p>You don't have permission to edit pets. <a href="/pets">Back to pets</a></p>
+    <p>Please sign in to add or edit pets. <a href="/pets">Back to pets</a></p>
 }
 else if (_notFound)
 {
@@ -92,6 +91,10 @@ else
     private bool IsNew => Id is null;
 
     private PetRequest? _model;
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthenticationStateTask { get; set; } = default!;
+
+    private bool _signedIn;
     private bool _notFound;
     private bool _saving;
     private List<string> _errors = [];
@@ -101,7 +104,10 @@ else
         _errors = [];
         _notFound = false;
 
-        if (!Permissions.CanWritePets)
+        // Only signed-in users see the form. The API still checks the pets.write scope and answers 403 without it.
+        var authState = await AuthenticationStateTask;
+        _signedIn = authState.User.Identity?.IsAuthenticated == true;
+        if (!_signedIn)
         {
             _model = null;
             return;

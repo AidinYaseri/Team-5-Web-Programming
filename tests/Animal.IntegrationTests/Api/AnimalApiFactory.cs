@@ -83,7 +83,8 @@ namespace Animal.IntegrationTests.Api
             string? subject = "test-subject",
             IEnumerable<string>? scopes = null,
             string scopeClaimType = "scope",
-            RSA? signingKey = null) =>
+            RSA? signingKey = null,
+            IEnumerable<System.Security.Claims.Claim>? extraClaims = null) =>
             _tokenFactory.CreateToken(
                 issuer,
                 audience,
@@ -91,7 +92,8 @@ namespace Animal.IntegrationTests.Api
                 subject,
                 scopes,
                 scopeClaimType,
-                signingKey);
+                signingKey,
+                extraClaims);
 
         // Builds the schema and the HasData seed rows (2 shelters, 5 pets) once the host exists.
         protected override IHost CreateHost(IHostBuilder builder)
@@ -114,6 +116,40 @@ namespace Animal.IntegrationTests.Api
             context.SaveChanges();
 
             context.Pets.AddRange(pets);
+            context.SaveChanges();
+        }
+
+        // Replaces users, notifications and appointments with the given rows. A user without an ExternalId gets
+        // its id as the ExternalId, so a test token with sub = "41" maps to user 41.
+        public void ResetUserData(IEnumerable<User> users, IEnumerable<Notification>? notifications = null, IEnumerable<Appointment>? appointments = null)
+        {
+            using var scope = Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+
+            context.Notifications.RemoveRange(context.Notifications);
+            context.Appointments.RemoveRange(context.Appointments);
+            context.Users.RemoveRange(context.Users);
+            context.SaveChanges();
+
+            var userRows = users.ToList();
+            foreach (var user in userRows.Where(user => string.IsNullOrWhiteSpace(user.ExternalId)))
+            {
+                user.ExternalId = user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+
+            context.Users.AddRange(userRows);
+            context.SaveChanges();
+
+            if (notifications is not null)
+            {
+                context.Notifications.AddRange(notifications);
+            }
+
+            if (appointments is not null)
+            {
+                context.Appointments.AddRange(appointments);
+            }
+
             context.SaveChanges();
         }
 

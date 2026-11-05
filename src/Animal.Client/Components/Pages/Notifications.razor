@@ -1,0 +1,72 @@
+@page "/notifications"
+@rendermode InteractiveServer
+@inject NotificationsApiClient Api
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AccessTokenProvider AccessTokenProvider
+@inject NotificationCountState NotificationCountState
+
+<PageTitle>Notifications</PageTitle>
+
+<h1>Notifications</h1>
+<AuthorizeView>
+    <Authorized>
+        @if (_error is not null) { <p class="error" role="alert">@_error</p> }
+        @if (_items is null) { <p>Loading notifications…</p> }
+        else if (_items.Count == 0) { <p>You’re all caught up.</p> }
+        else
+        {
+            <ul class="notification-list">
+                @foreach (var item in _items)
+                {
+                    <li class="@(item.IsRead ? "read" : "unread")">
+                        <p>@item.Message</p>
+                        <small>@item.Date.ToLocalTime().ToString("g")</small>
+                        @if (!item.IsRead) { <button class="secondary" @onclick="() => MarkReadAsync(item.Id)">Mark as read</button> }
+                    </li>
+                }
+            </ul>
+        }
+    </Authorized>
+    <NotAuthorized><p><a href="/auth/login">Sign in</a> to view your notifications.</p></NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private List<NotificationResponse>? _items;
+    private string? _error;
+    private bool _loaded;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _loaded) return;
+        _loaded = true;
+        if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
+        {
+            await AccessTokenProvider.RefreshAsync();
+            await LoadAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            _items = (await Api.GetAsync()).ToList();
+            NotificationCountState.SetUnreadCount(_items.Count(item => !item.IsRead));
+            _error = null;
+        }
+        catch (ApiException ex) { _error = ex.Message; _items = []; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; _items = []; }
+    }
+
+    private async Task MarkReadAsync(int id)
+    {
+        try
+        {
+            await Api.MarkAsReadAsync(id);
+            await LoadAsync();
+        }
+        catch (ApiException ex) { _error = ex.Message; }
+        catch (HttpRequestException) { _error = "Can't reach the API. Is Animal.API running?"; }
+    }
+}
