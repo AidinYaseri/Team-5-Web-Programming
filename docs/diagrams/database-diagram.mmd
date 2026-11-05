@@ -1,0 +1,54 @@
+erDiagram
+    SHELTERS ||--o{ PETS : houses
+    SHELTERS ||--o{ APPOINTMENTS : hosts
+    USERS ||--o{ ADOPTION_APPLICATIONS : submits
+    PETS ||--o{ ADOPTION_APPLICATIONS : "applied for"
+    USERS ||--o{ APPOINTMENTS : books
+    PETS ||--o{ APPOINTMENTS : "visited in"
+    USERS ||--o{ NOTIFICATIONS : receives
+
+    SHELTERS {
+        int Id PK
+        nvarchar Name
+        nvarchar Address
+        nvarchar PhoneNumber
+        nvarchar Email
+    }
+    PETS {
+        int Id PK
+        nvarchar Name
+        nvarchar Species "indexed"
+        nvarchar Breed
+        int Age
+        bit IsAvailable
+        int ShelterId FK "restrict"
+    }
+    USERS {
+        int Id PK
+        nvarchar ExternalId UK "token sub"
+        nvarchar Name
+        nvarchar Email UK
+        nvarchar PhoneNumber
+    }
+    ADOPTION_APPLICATIONS {
+        int Id PK
+        int UserId FK "restrict"
+        int PetId FK "restrict"
+        nvarchar Status "Pending, Approved, Rejected"
+        datetime2 ApplicationDate
+    }
+    APPOINTMENTS {
+        int Id PK
+        int UserId FK "restrict"
+        int PetId FK "restrict"
+        int ShelterId FK "restrict"
+        datetime2 AppointmentDate
+        nvarchar Status "Scheduled, Completed, Cancelled"
+    }
+    NOTIFICATIONS {
+        int Id PK
+        int UserId FK "cascade"
+        nvarchar Message
+        datetime2 Date
+        bit IsRead
+    }

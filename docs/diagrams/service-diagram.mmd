@@ -6,16 +6,17 @@ flowchart LR
     subgraph API["Animal.API · REST endpoints"]
         direction TB
         Pets[PetsController]
+        Shelters[SheltersController]
+        Users[UsersController]
+        Adoptions[AdoptionsController]
         Appointments[AppointmentsController]
         Notifications[NotificationsController]
-        Auth[JWT bearer + scope policies]
+        Auth[JWT bearer + scope policies<br/>deny by default]
         Services[Application services]
     end
 
     subgraph DOMAIN["Animal.Domain · entities and rules"]
-        PetRules[PetRules]
-        AppointmentRules[AppointmentRules]
-        NotificationRules[NotificationRules]
+        Rules[PetRules · ShelterRules · UserRules<br/>AdoptionRules · AppointmentRules · NotificationRules]
         Entities[Pets · Shelters · Users<br/>Adoptions · Appointments · Notifications]
     end
 
@@ -35,11 +36,12 @@ flowchart LR
     UserRepo -->|local user ID| Auth
     Auth -->|authorized requests| Services
     Pets --> Services
+    Shelters --> Services
+    Users --> Services
+    Adoptions --> Services
     Appointments --> Services
     Notifications --> Services
-    Services --> PetRules
-    Services --> AppointmentRules
-    Services --> NotificationRules
+    Services --> Rules
     Services --> Entities
     Services --> Repos
     Services --> UnitOfWork
