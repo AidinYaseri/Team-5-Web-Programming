@@ -29,6 +29,21 @@ namespace Animal.UnitTests.Client
             Assert.Equal(new UserResponse(4, "Sam", "sam@example.com", "555-0100"), result);
         }
 
+        // The API answers 401 with an empty body, so the message falls back to the status code.
+        // The profile page relies on this exception to show "Please sign in".
+        [Fact]
+        public async Task GetMyProfileAsync_Unauthorized_ThrowsWithStatusCode()
+        {
+            var handler = new FakeHandler(HttpStatusCode.Unauthorized, "");
+            var client = new UsersApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://api.test/") });
+
+            var exception = await Assert.ThrowsAsync<ApiException>(() => client.GetMyProfileAsync());
+
+            Assert.Equal(HttpStatusCode.Unauthorized, exception.StatusCode);
+            Assert.Empty(exception.Errors);
+            Assert.Equal("The API returned 401.", exception.Message);
+        }
+
         [Theory]
         [InlineData(HttpStatusCode.BadRequest, "Please correct the profile.")]
         [InlineData(HttpStatusCode.Conflict, "That email is already in use.")]

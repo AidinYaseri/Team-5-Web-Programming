@@ -25,6 +25,7 @@ namespace Animal.IntegrationTests.Api
             var response = await client.GetAsync("/api/users/me");
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+            Assert.Contains("You don't have a profile yet.", await response.Content.ReadAsStringAsync());
         }
 
         [Fact]

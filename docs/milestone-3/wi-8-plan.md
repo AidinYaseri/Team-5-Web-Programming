@@ -331,3 +331,13 @@ Mutation check (each change reverted afterwards):
 | `GET /me` used `UsersWrite` instead of `UsersRead` | `GetMyProfile_BeforePut_ReturnsNotFound` + the 403 test |
 
 Known: the 404 message reads "User 0 was not found."; the step 2 commit is missing the `#` before 19.
+
+## Code review agent findings (2026-11-05)
+
+| Severity | Finding | Resolution |
+|---|---|---|
+| Major | `AddUserExternalId` adds a required unique column with default `""`; it fails on databases that already have user rows | Accepted and documented. No environment has user rows (no seed data; CI only scripts the migration), and existing rows have no identity-provider `sub` to backfill. Anyone with local test users must delete them before `dotnet ef database update`. |
+| Minor | `UsersApiClientTests` had no 401 case | Fixed: `GetMyProfileAsync_Unauthorized_ThrowsWithStatusCode` |
+| Nit | A missing profile returned "User 0 was not found." | Fixed: "You don't have a profile yet.", asserted in `GetMyProfile_BeforePut_ReturnsNotFound` |
+
+The fixes were made with Claude Code, not the Copilot agents. The agent didn't flag the step 2 commit missing the `#` (it only reviews the diff, not commit messages).

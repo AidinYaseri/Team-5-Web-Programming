@@ -24,7 +24,7 @@ namespace Animal.API.Services
             ArgumentException.ThrowIfNullOrWhiteSpace(subject);
 
             var user = await _users.GetByExternalIdAsync(subject, cancellationToken)
-                ?? throw new EntityNotFoundException(nameof(User), 0);
+                ?? throw new EntityNotFoundException(nameof(User), "You don't have a profile yet.");
 
             return UserResponse.FromUser(user);
         }
