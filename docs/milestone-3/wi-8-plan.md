@@ -316,3 +316,18 @@ Reviewed Copilot's first plan against the Gate 1 checklist in the research brief
 7. Wrong work item reference ("WI-15"). Corrected to WI-4 (#15).
 
 Notes for implementation: the existing `DeletePet_WithAdoptionApplication_ReturnsConflict` test creates a `User` and will need an `ExternalId`; the user repository is registered once, in `AddAnimalData`.
+
+## Gate 2 review (Aiden, 2026-11-05)
+
+- `dotnet build`: 0 warnings. `dotnet test`: 162 passed (86 unit + 76 integration). `has-pending-model-changes`: none.
+- Manual run on SQL Server LocalDB: `InitialCreate` + `AddUserExternalId` applied; `GET /api/pets` → 200 with seed data; `GET /api/users/me` without a token → 401.
+
+Mutation check (each change reverted afterwards):
+
+| Deliberate bug | Caught by |
+|---|---|
+| Removed "exclude own row" from `EmailInUseAsync` | 2 endpoint tests + `EmailInUseAsync_ExcludesRequestedUser` |
+| Removed email lowercasing | 3 `UserServiceTests` + `PutMyProfile_WithAnotherUsersEmail_ReturnsConflict` |
+| `GET /me` used `UsersWrite` instead of `UsersRead` | `GetMyProfile_BeforePut_ReturnsNotFound` + the 403 test |
+
+Known: the 404 message reads "User 0 was not found."; the step 2 commit is missing the `#` before 19.
