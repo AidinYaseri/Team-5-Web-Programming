@@ -30,10 +30,10 @@ namespace Animal.API.Authorization
                 return principal;
             }
 
-            var identity = principal.Identities.FirstOrDefault(candidate => candidate.HasClaim(ScopeClaims.Subject, subject));
-            if (identity is not null)
+            var subjectIdentity = principal.Identities.FirstOrDefault(candidate => candidate.HasClaim(ScopeClaims.Subject, subject));
+            if (subjectIdentity is not null)
             {
-                identity.AddClaim(new Claim(ScopeClaims.LocalUserId, user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                subjectIdentity.AddClaim(new Claim(ScopeClaims.LocalUserId, user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             }
 
             return principal;
