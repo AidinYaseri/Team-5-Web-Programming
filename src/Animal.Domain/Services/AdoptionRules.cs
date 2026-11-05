@@ -7,13 +7,23 @@ namespace Animal.Domain.Services
     // Pure business rules for adoption applications. Only Pending applications can be approved or rejected.
     public static class AdoptionRules
     {
+        // A pet that is already adopted conflicts with the current data, so 409 (WI-9 acceptance criteria).
         public static void EnsureCanApply(Pet pet)
         {
             ArgumentNullException.ThrowIfNull(pet);
 
             if (!pet.IsAvailable)
             {
-                throw new DomainValidationException($"Pet {pet.Id} is not available for adoption.");
+                throw new EntityConflictException($"Pet {pet.Id} is not available for adoption.");
+            }
+        }
+
+        // One open application per adopter and pet. Other adopters can still apply for the same pet.
+        public static void EnsureNotAlreadyApplied(bool hasPendingApplication)
+        {
+            if (hasPendingApplication)
+            {
+                throw new EntityConflictException("You already have a pending application for this pet.");
             }
         }
 

@@ -36,7 +36,7 @@ if (identityConfigured)
         options.GetClaimsFromUserInfoEndpoint = true;
         options.Scope.Clear();
         foreach (var scope in (builder.Configuration["Authentication:Scopes"] ??
-                     "openid profile pets.write shelters.write users.read users.write adoptions.read adoptions.write appointments.read appointments.write notifications.read")
+                     "openid profile pets.write shelters.write users.read users.write adoptions.read adoptions.write adoptions.review appointments.read appointments.write notifications.read")
                      .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             options.Scope.Add(scope);
@@ -61,6 +61,8 @@ builder.Services.AddHttpClient<UsersApiClient>(client => client.BaseAddress = ne
 builder.Services.AddHttpClient<NotificationsApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<AccessTokenHandler>();
 builder.Services.AddHttpClient<AppointmentsApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<AccessTokenHandler>();
+builder.Services.AddHttpClient<AdoptionsApiClient>(client => client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<AccessTokenHandler>();
 
 var app = builder.Build();

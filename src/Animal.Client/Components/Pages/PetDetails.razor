@@ -1,6 +1,7 @@
 @page "/pets/{Id:int}"
 @rendermode InteractiveServer
 @inject PetsApiClient Api
+@inject AdoptionsApiClient AdoptionsApi
 
 <PageTitle>Pet details</PageTitle>
 
@@ -40,7 +41,22 @@ else
     </dl>
     @if (_pet.IsAvailable)
     {
-        <p><a class="button" href="/pets/@_pet.Id/visit">Book a visit</a></p>
+        <p>
+            <a class="button" href="/pets/@_pet.Id/visit">Book a visit</a>
+            <AuthorizeView>
+                <Authorized>
+                    <button disabled="@_applying" @onclick="ApplyAsync">@(_applying ? "Sending…" : "Apply to adopt")</button>
+                </Authorized>
+            </AuthorizeView>
+        </p>
+    }
+    @if (_applyMessage is not null)
+    {
+        <p role="status">@_applyMessage <a href="/applications">See my applications</a></p>
+    }
+    @if (_applyError is not null)
+    {
+        <p class="error" role="alert">@_applyError</p>
     }
     <p><a href="/pets">Back to pets</a></p>
 }
@@ -52,6 +68,9 @@ else
     private PetResponse? _pet;
     private bool _notFound;
     private string? _error;
+    private bool _applying;
+    private string? _applyMessage;
+    private string? _applyError;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -76,5 +95,22 @@ else
             _error = "Can't reach the API. Is Animal.API running?";
             _pet = null;
         }
+    }
+
+    // The API takes the applicant from the access token. 409 means the pet is taken or you already applied.
+    private async Task ApplyAsync()
+    {
+        if (_pet is null) return;
+        _applying = true;
+        _applyMessage = null;
+        _applyError = null;
+        try
+        {
+            await AdoptionsApi.ApplyAsync(_pet.Id);
+            _applyMessage = $"Your application for {_pet.Name} was sent.";
+        }
+        catch (ApiException ex) { _applyError = ex.Message; }
+        catch (HttpRequestException) { _applyError = "Can't reach the API. Is Animal.API running?"; }
+        finally { _applying = false; }
     }
 }

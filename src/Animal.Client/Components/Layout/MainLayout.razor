@@ -16,6 +16,8 @@
                 <NavLink href="profile">My profile</NavLink>
                 <NavLink href="notifications">🔔 Notifications @if (NotificationCountState.UnreadCount > 0) { <span class="unread-count">@NotificationCountState.UnreadCount</span> }</NavLink>
                 <NavLink href="appointments">My appointments</NavLink>
+                <NavLink href="applications">My applications</NavLink>
+                <NavLink href="applications/review">Review applications</NavLink>
                 <form method="post" action="/auth/logout" class="inline-form">
                     <AntiforgeryToken />
                     <button class="link-button" type="submit">Sign out</button>

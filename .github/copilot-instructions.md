@@ -7,7 +7,7 @@
 - **Database:** SQL Server via EF Core (code-first migrations).
 - **API docs:** built-in OpenAPI (`AddOpenApi`/`MapOpenApi`), served at `/openapi/v1.json` in Development only.
 - **Target runtime:** cross-platform .NET 10 (developed on Windows/Visual Studio, CI on Ubuntu).
-- **Status:** Milestone 3. Pets, Shelters, Users, Appointments and Notifications work end to end (Domain, Data, Api, Blazor client) with JWT bearer auth. Adoptions (WI-9) is next. Follow the architecture below and the endpoint contracts in `docs/milestone-3/api-contracts.md`.
+- **Status:** Milestone 3. All six slices (Pets, Shelters, Users, Adoptions, Appointments, Notifications) work end to end (Domain, Data, Api, Blazor client) with JWT bearer auth. Follow the architecture below and the endpoint contracts in `docs/milestone-3/api-contracts.md`.
 
 ## 2. Project layout
 

@@ -34,6 +34,7 @@ builder.Services.AddScoped<IShelterService, ShelterService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+builder.Services.AddScoped<IAdoptionService, AdoptionService>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 builder.Services.AddProblemDetails();

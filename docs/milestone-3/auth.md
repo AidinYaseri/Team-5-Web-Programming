@@ -145,9 +145,15 @@ Every controller action has an explicit attribute; anything else falls back to "
 | `POST` | `/api/appointments`, `/api/appointments/{id}/cancel` | `appointments.write` + mapped local user |
 | `GET` | `/api/notifications` | `notifications.read` + mapped local user |
 | `POST` | `/api/notifications/{id}/read` | `notifications.read` + mapped local user |
+| `POST` | `/api/adoptions` | `adoptions.write` + mapped local user |
+| `GET` | `/api/adoptions/mine` | `adoptions.read` + mapped local user |
+| `GET` | `/api/adoptions/{id}` | `adoptions.read-or-review`: `adoptions.review` (any application), or `adoptions.read` + mapped user (own only; others read as 404) |
+| `GET` | `/api/adoptions?status=` | `adoptions.review` |
+| `POST` | `/api/adoptions/{id}/approve`, `/api/adoptions/{id}/reject` | `adoptions.review` |
 | `GET` | `/openapi/v1.json` (Development only) | Public: `AllowAnonymous()` |
 
-`adoptions.read`, `adoptions.write` and `adoptions.review` are registered and will be applied by WI-9.
+The client requests `adoptions.review` along with the other scopes so the review page can work for staff. The identity
+provider must only grant it to shelter staff; the API checks it on every reviewer endpoint.
 
 ## Current-user identity
 

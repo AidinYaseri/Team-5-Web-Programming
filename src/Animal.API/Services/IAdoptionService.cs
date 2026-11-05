@@ -1,15 +1,18 @@
-﻿using Animal.Domain.Entities;
+using Animal.API.Contracts;
 
 namespace Animal.API.Services
 {
-    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
-    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
+    // Adopters apply and follow their own applications; reviewers (adoptions.review) see all and approve or reject.
     public interface IAdoptionService
     {
-        AdoptionApplication GetApplication(int id);
-        List<AdoptionApplication> GetApplications();
-        AdoptionApplication CreateApplication(AdoptionApplication application);
-        void ApproveApplication(int id);
-        void RejectApplication(int id);
+        Task<AdoptionResponse> ApplyAsync(int userId, CreateAdoptionRequest request, CancellationToken cancellationToken = default);
+        Task<List<AdoptionResponse>> GetMineAsync(int userId, CancellationToken cancellationToken = default);
+
+        // Reviewers can read any application. Everyone else only their own; someone else's reads as not found.
+        Task<AdoptionResponse> GetAsync(int id, int? requesterUserId, bool requesterCanReview, CancellationToken cancellationToken = default);
+
+        Task<List<AdoptionResponse>> SearchAsync(AdoptionQuery query, CancellationToken cancellationToken = default);
+        Task ApproveAsync(int id, CancellationToken cancellationToken = default);
+        Task RejectAsync(int id, CancellationToken cancellationToken = default);
     }
 }
