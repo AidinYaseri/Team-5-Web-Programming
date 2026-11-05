@@ -65,7 +65,7 @@ sequenceDiagram
     API-->>Client: JSON response
 ```
 
-Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [services-class-diagram.mmd](docs/diagrams/services-class-diagram.mmd). The database diagram is available at [database-diagram.png](docs/diagrams/database-diagram.png).
+Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [services-class-diagram.mmd](docs/diagrams/services-class-diagram.mmd). Rendered PNGs: [service-diagram.png](generated-diagrams/service-diagram.png) and [services-class-diagram.png](generated-diagrams/services-class-diagram.png). The existing database diagram remains available at [database-diagram.png](docs/diagrams/database-diagram.png).
 
 ## Run locally
 
