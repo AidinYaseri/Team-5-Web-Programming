@@ -119,7 +119,8 @@ namespace Animal.IntegrationTests.Api
             context.SaveChanges();
         }
 
-        // Replaces users, notifications and appointments with the given rows. A user without an ExternalId gets
+        // Replaces users, notifications and appointments with the given rows (and removes adoption applications,
+        // which also point at users). A user without an ExternalId gets
         // its id as the ExternalId, so a test token with sub = "41" maps to user 41.
         public void ResetUserData(IEnumerable<User> users, IEnumerable<Notification>? notifications = null, IEnumerable<Appointment>? appointments = null)
         {
@@ -128,6 +129,7 @@ namespace Animal.IntegrationTests.Api
 
             context.Notifications.RemoveRange(context.Notifications);
             context.Appointments.RemoveRange(context.Appointments);
+            context.AdoptionApplications.RemoveRange(context.AdoptionApplications);
             context.Users.RemoveRange(context.Users);
             context.SaveChanges();
 

@@ -152,14 +152,14 @@ The provider's opaque `sub` is stored in the unique `User.ExternalId` column (mi
 
 | Method | Route | Auth | Request | Success | Errors |
 |---|---|---|---|---|---|
-| POST | `/api/adoptions` | `adoptions.write` | `CreateAdoptionRequest` | 201 `AdoptionResponse` | 400 (incl. pet not available, already applied), 401, 403, 404 (pet) |
+| POST | `/api/adoptions` | `adoptions.write` | `CreateAdoptionRequest` | 201 `AdoptionResponse` | 400, 401, 403, 404 (pet), 409 (pet not available, or you already have a pending application for it; per WI-9) |
 | GET | `/api/adoptions/mine` | `adoptions.read` | — | 200 `AdoptionResponse[]` | 401, 403 |
 | GET | `/api/adoptions/{id}` | `adoptions.read` (own) or `adoptions.review` | — | 200 `AdoptionResponse` | 401, 403, 404 |
 | GET | `/api/adoptions?status=Pending` | `adoptions.review` | `AdoptionQuery` | 200 `AdoptionResponse[]` | 400, 401, 403 |
 | POST | `/api/adoptions/{id}/approve` | `adoptions.review` | — | 204 | 401, 403, 404, 409 (not pending) |
 | POST | `/api/adoptions/{id}/reject` | `adoptions.review` | — | 204 | 401, 403, 404, 409 (not pending) |
 
-On approve: the pet becomes unavailable, other pending applications for that pet are rejected, and each applicant gets a notification. `AdoptionRules.Approve` and `AdoptionRules.Reject` already do the status checks and mark the pet unavailable; rejecting the other applications and the notifications are WI-9.
+On approve: the pet becomes unavailable, other pending applications for that pet are rejected, and each applicant gets a notification, all saved in one `SaveChangesAsync`. Applying and rejecting also notify the applicant. Someone else's application reads as 404 for adopters; reviewers (`adoptions.review`) can read any.
 
 ```jsonc
 // CreateAdoptionRequest: userId comes from the token, not the body

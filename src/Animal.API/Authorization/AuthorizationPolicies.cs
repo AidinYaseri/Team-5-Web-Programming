@@ -16,6 +16,9 @@ namespace Animal.API.Authorization
         public const string AppointmentsWrite = "appointments.write";
         public const string NotificationsRead = "notifications.read";
 
+        // Not a scope: GET /api/adoptions/{id} is allowed with adoptions.read (own) or adoptions.review (any).
+        public const string AdoptionsReadOrReview = "adoptions.read-or-review";
+
         public static readonly string[] All =
         [
             PetsWrite, SheltersWrite, UsersRead, UsersWrite, AdoptionsRead, AdoptionsWrite,
@@ -24,7 +27,9 @@ namespace Animal.API.Authorization
 
         // These work on the caller's own rows, so the token's sub must already map to a local user
         // (see SubjectToUserIdClaimsTransformation). Users policies are left out: PUT /api/users/me creates that user.
-        private static readonly HashSet<string> NeedsLocalUser = [AppointmentsRead, AppointmentsWrite, NotificationsRead];
+        // adoptions.review is left out too: reviewers act on other people's applications.
+        private static readonly HashSet<string> NeedsLocalUser =
+            [AdoptionsRead, AdoptionsWrite, AppointmentsRead, AppointmentsWrite, NotificationsRead];
 
         public static void Configure(AuthorizationOptions options)
         {
@@ -48,6 +53,12 @@ namespace Animal.API.Authorization
                     }
                 });
             }
+
+            options.AddPolicy(AdoptionsReadOrReview, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireAssertion(context =>
+                    ScopeClaims.HasScope(context.User, AdoptionsReview)
+                    || (ScopeClaims.HasScope(context.User, AdoptionsRead) && ScopeClaims.HasMappedUser(context.User))));
         }
     }
 }
