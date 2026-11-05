@@ -9,6 +9,29 @@ classDiagram
         +UpdatePetAsync(id, request, token) Task
         +DeletePetAsync(id, token) Task
     }
+    class IShelterService {
+        <<interface>>
+        +GetSheltersAsync(token) Task~List~ShelterResponse~~
+        +GetShelterAsync(id, token) Task~ShelterResponse~
+        +GetShelterPetsAsync(id, token) Task~List~PetResponse~~
+        +CreateShelterAsync(request, token) Task~ShelterResponse~
+        +UpdateShelterAsync(id, request, token) Task
+        +DeleteShelterAsync(id, token) Task
+    }
+    class IUserService {
+        <<interface>>
+        +GetMyProfileAsync(subject, token) Task~UserResponse~
+        +CreateOrUpdateMyProfileAsync(subject, request, token) Task
+    }
+    class IAdoptionService {
+        <<interface>>
+        +ApplyAsync(userId, request, token) Task~AdoptionResponse~
+        +GetMineAsync(userId, token) Task~List~AdoptionResponse~~
+        +GetAsync(id, requesterUserId, canReview, token) Task~AdoptionResponse~
+        +SearchAsync(query, token) Task~List~AdoptionResponse~~
+        +ApproveAsync(id, token) Task
+        +RejectAsync(id, token) Task
+    }
     class IAppointmentService {
         <<interface>>
         +GetForUserAsync(userId, token) Task~IReadOnlyList~AppointmentResponse~~
@@ -21,45 +44,42 @@ classDiagram
         +CreateAsync(userId, message, token) Task
         +MarkAsReadAsync(userId, id, token) Task~bool~
     }
-    class PetService
-    class AppointmentService
-    class NotificationService
+    class ICurrentUser {
+        <<interface>>
+        +Subject string
+        +UserId int
+    }
     class SubjectToUserIdClaimsTransformation {
         +TransformAsync(principal) ClaimsPrincipal
     }
-    class HttpCurrentUser {
-        +UserId int
-    }
-    class IUserRepository {
-        <<interface>>
-        +GetByExternalIdAsync(sub, token) Task~User~
-    }
-    class UserRepository
     class IUnitOfWork {
         <<interface>>
         +SaveChangesAsync(token) Task~int~
     }
-    class IAppointmentRepository {
-        <<interface>>
-        +GetForUserAsync(userId, token)
-        +GetForUserAsync(userId, appointmentId, token)
-        +IsSlotTakenAsync(shelterId, date, token)
-    }
-    class INotificationRepository {
-        <<interface>>
-        +GetForUserAsync(userId, unreadOnly, token)
-        +GetForUserAsync(userId, notificationId, token)
-        +Add(notification)
-    }
 
     IPetService <|.. PetService
+    IShelterService <|.. ShelterService
+    IUserService <|.. UserService
+    IAdoptionService <|.. AdoptionService
     IAppointmentService <|.. AppointmentService
     INotificationService <|.. NotificationService
-    IUserRepository <|.. UserRepository
+    ICurrentUser <|.. HttpCurrentUser
+
+    PetService --> IPetRepository
+    PetService --> IShelterRepository
+    ShelterService --> IShelterRepository
+    UserService --> IUserRepository
+    AdoptionService --> IAdoptionRepository
+    AdoptionService --> IPetRepository
+    AdoptionService --> INotificationService : notifies applicants
     AppointmentService --> IAppointmentRepository
-    AppointmentService --> INotificationService : creates booking updates
-    AppointmentService --> IUnitOfWork : saves appointment and notification once
+    AppointmentService --> INotificationService : notifies on book and cancel
     NotificationService --> INotificationRepository
-    NotificationService --> IUnitOfWork : saves read status changes
+    PetService --> IUnitOfWork
+    ShelterService --> IUnitOfWork
+    UserService --> IUnitOfWork
+    AdoptionService --> IUnitOfWork : one save per approve or reject
+    AppointmentService --> IUnitOfWork
+    NotificationService --> IUnitOfWork
     SubjectToUserIdClaimsTransformation --> IUserRepository : maps sub to ExternalId
-    HttpCurrentUser --> SubjectToUserIdClaimsTransformation : reads local-user claim
+    HttpCurrentUser ..> SubjectToUserIdClaimsTransformation : reads local_user_id claim
