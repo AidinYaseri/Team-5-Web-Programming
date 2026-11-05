@@ -9,7 +9,14 @@ namespace Animal.Domain.Exceptions
             Id = id;
         }
 
+        // For lookups that have no id to report, e.g. "the current user's profile".
+        public EntityNotFoundException(string entityName, string message)
+            : base(message)
+        {
+            EntityName = entityName;
+        }
+
         public string EntityName { get; }
-        public int Id { get; }
+        public int? Id { get; }
     }
 }
