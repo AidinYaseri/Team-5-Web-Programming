@@ -61,5 +61,13 @@ namespace Animal.Domain.Services
                 throw new DomainValidationException(errors);
             }
         }
+
+        public static void EnsureCanDelete(int petId, bool hasOpenApplication)
+        {
+            if (hasOpenApplication)
+            {
+                throw new EntityConflictException($"Pet {petId} can't be deleted because it has an open adoption application.");
+            }
+        }
     }
 }

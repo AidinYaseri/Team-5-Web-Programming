@@ -1,14 +1,11 @@
-﻿using Animal.Domain.Entities;
+using Animal.API.Contracts;
 
 namespace Animal.API.Services
 {
-    // Planned application service, not implemented yet. When you build it, follow IPetService/PetService:
-    // async methods, request/response DTOs from Contracts/ instead of entities, and repositories from Animal.Data.
     public interface INotificationService
     {
-        Notification GetNotification(int id);
-        List<Notification> GetNotifications();
-        Notification CreateNotification(Notification notification);
-        void MarkAsRead(int id);
+        Task<IReadOnlyList<NotificationResponse>> GetForUserAsync(int userId, bool unreadOnly, CancellationToken cancellationToken = default);
+        Task CreateAsync(int userId, string message, CancellationToken cancellationToken = default);
+        Task<bool> MarkAsReadAsync(int userId, int notificationId, CancellationToken cancellationToken = default);
     }
 }

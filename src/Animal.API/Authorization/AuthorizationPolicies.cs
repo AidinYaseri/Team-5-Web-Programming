@@ -1,15 +1,53 @@
-namespace Animal.API.Authorization;
+using Microsoft.AspNetCore.Authorization;
 
-public static class AuthorizationPolicies
+namespace Animal.API.Authorization
 {
-    public const string PetsWrite = "pets.write";
-    public const string SheltersWrite = "shelters.write";
-    public const string UsersRead = "users.read";
-    public const string UsersWrite = "users.write";
-    public const string AdoptionsRead = "adoptions.read";
-    public const string AdoptionsWrite = "adoptions.write";
-    public const string AdoptionsReview = "adoptions.review";
-    public const string AppointmentsRead = "appointments.read";
-    public const string AppointmentsWrite = "appointments.write";
-    public const string NotificationsRead = "notifications.read";
+    // One named policy per scope in docs/milestone-3/api-contracts.md. The policy name is the scope string.
+    public static class AuthorizationPolicies
+    {
+        public const string PetsWrite = "pets.write";
+        public const string SheltersWrite = "shelters.write";
+        public const string UsersRead = "users.read";
+        public const string UsersWrite = "users.write";
+        public const string AdoptionsRead = "adoptions.read";
+        public const string AdoptionsWrite = "adoptions.write";
+        public const string AdoptionsReview = "adoptions.review";
+        public const string AppointmentsRead = "appointments.read";
+        public const string AppointmentsWrite = "appointments.write";
+        public const string NotificationsRead = "notifications.read";
+
+        public static readonly string[] All =
+        [
+            PetsWrite, SheltersWrite, UsersRead, UsersWrite, AdoptionsRead, AdoptionsWrite,
+            AdoptionsReview, AppointmentsRead, AppointmentsWrite, NotificationsRead
+        ];
+
+        // These work on the caller's own rows, so the token's sub must already map to a local user
+        // (see SubjectToUserIdClaimsTransformation). Users policies are left out: PUT /api/users/me creates that user.
+        private static readonly HashSet<string> NeedsLocalUser = [AppointmentsRead, AppointmentsWrite, NotificationsRead];
+
+        public static void Configure(AuthorizationOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(options);
+
+            // Deny by default: an endpoint without [Authorize] or [AllowAnonymous] still needs a signed-in user.
+            options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser()
+                .Build();
+
+            foreach (var scope in All)
+            {
+                options.AddPolicy(scope, policy =>
+                {
+                    policy.RequireAuthenticatedUser()
+                        .RequireAssertion(context => ScopeClaims.HasScope(context.User, scope));
+
+                    if (NeedsLocalUser.Contains(scope))
+                    {
+                        policy.RequireAssertion(context => ScopeClaims.HasMappedUser(context.User));
+                    }
+                });
+            }
+        }
+    }
 }

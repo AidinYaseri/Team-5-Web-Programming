@@ -1,0 +1,110 @@
+@page "/shelters/{Id:int}"
+@rendermode InteractiveServer
+@inject SheltersApiClient Api
+
+<PageTitle>Shelter details</PageTitle>
+
+@if (_notFound)
+{
+    <p>That shelter doesn't exist. <a href="shelters">Back to shelters</a></p>
+}
+else if (_shelter is null)
+{
+    @if (_error is not null)
+    {
+        <p class="error" role="alert">@_error</p>
+    }
+    else
+    {
+        <p>Loading...</p>
+    }
+}
+else
+{
+    <div class="page-heading">
+        <h1>@_shelter.Name</h1>
+        <a class="button" href="/shelters/@_shelter.Id/edit">Edit</a>
+    </div>
+
+    <p><strong>Address:</strong> @_shelter.Address</p>
+    <p><strong>Phone:</strong> @_shelter.PhoneNumber</p>
+    <p><strong>Email:</strong> @_shelter.Email</p>
+
+    <h2>Pets</h2>
+
+    @if (_pets is null)
+    {
+        <p>Loading pets...</p>
+    }
+    else if (_pets.Count == 0)
+    {
+        <p>No pets are currently registered under this shelter.</p>
+    }
+    else
+    {
+        <table class="pets">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Species</th>
+                    <th>Breed</th>
+                    <th>Age</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var pet in _pets)
+                {
+                    <tr>
+                        <td>@pet.Name</td>
+                        <td>@pet.Species</td>
+                        <td>@pet.Breed</td>
+                        <td>@pet.Age</td>
+                        <td>@(pet.IsAvailable ? "Available" : "Adopted")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ShelterResponse? _shelter;
+    private List<PetResponse>? _pets;
+    private bool _notFound;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _error = null;
+        _notFound = false;
+
+        try
+        {
+            _shelter = await Api.GetShelterAsync(Id);
+            if (_shelter is null)
+            {
+                _notFound = true;
+                _pets = null;
+                return;
+            }
+
+            _pets = await Api.GetShelterPetsAsync(Id);
+        }
+        catch (ApiException ex)
+        {
+            _error = ex.Message;
+            _shelter = null;
+            _pets = null;
+        }
+        catch (HttpRequestException)
+        {
+            _error = "Can't reach the API. Is Animal.API running?";
+            _shelter = null;
+            _pets = null;
+        }
+    }
+}

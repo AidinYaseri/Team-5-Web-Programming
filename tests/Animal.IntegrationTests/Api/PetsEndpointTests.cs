@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
 using Animal.Data.Context;
@@ -12,7 +13,6 @@ namespace Animal.IntegrationTests.Api
     {
         private readonly AnimalApiFactory _factory;
         private readonly HttpClient _client;
-        private readonly HttpClient _authenticatedClient;
 
         public PetsEndpointTests(AnimalApiFactory factory)
         {
@@ -27,7 +27,6 @@ namespace Animal.IntegrationTests.Api
             ]);
 
             _client = factory.CreateClient();
-            _authenticatedClient = factory.CreateAuthenticatedClient();
         }
 
         private static CreatePetRequest NewPet() =>
@@ -41,6 +40,24 @@ namespace Animal.IntegrationTests.Api
             var pets = await response.Content.ReadFromJsonAsync<List<PetResponse>>();
             Assert.NotNull(pets);
             return pets.Select(p => p.Id).ToArray();
+        }
+
+        // Builds a write request. With a scope, it carries a real signed access token for that scope
+        // (from AnimalApiFactory); without one, it has no Authorization header at all.
+        private HttpRequestMessage WriteRequest(HttpMethod method, string url, object? body = null, string? scope = null)
+        {
+            var request = new HttpRequestMessage(method, url);
+            if (body is not null)
+            {
+                request.Content = JsonContent.Create(body);
+            }
+
+            if (scope is not null)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: [scope]));
+            }
+
+            return request;
         }
 
         [Fact]
@@ -165,7 +182,8 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task CreatePet_Valid_ReturnsCreatedWithLocation()
         {
-            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", NewPet());
+            using var request = WriteRequest(HttpMethod.Post, "/api/pets", NewPet(), scope: "pets.write");
+            using var response = await _client.SendAsync(request);
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
             var created = await response.Content.ReadFromJsonAsync<PetResponse>();
@@ -184,21 +202,40 @@ namespace Animal.IntegrationTests.Api
             var request = NewPet();
             request.Name = "";
 
-            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", request);
+            using var message = WriteRequest(HttpMethod.Post, "/api/pets", request, scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         }
 
         [Fact]
-        public async Task CreatePet_UnknownShelter_ReturnsBadRequestFromDomainCheck()
+        public async Task CreatePet_UnknownShelter_ReturnsNotFound()
         {
             var request = NewPet();
             request.ShelterId = 99;
 
-            var response = await _authenticatedClient.PostAsJsonAsync("/api/pets", request);
+            using var message = WriteRequest(HttpMethod.Post, "/api/pets", request, scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-            Assert.Contains("Shelter 99 does not exist.", await response.Content.ReadAsStringAsync());
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreatePet_WithoutAuthentication_Returns401()
+        {
+            using var message = WriteRequest(HttpMethod.Post, "/api/pets", NewPet());
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task CreatePet_WithoutWritePermission_Returns403()
+        {
+            using var message = WriteRequest(HttpMethod.Post, "/api/pets", NewPet(), scope: "pets.read");
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         [Fact]
@@ -206,7 +243,8 @@ namespace Animal.IntegrationTests.Api
         {
             var request = new UpdatePetRequest { Name = "Biscuit", Species = "Dog", Breed = "Beagle", Age = 4, IsAvailable = false, ShelterId = 1 };
 
-            var response = await _authenticatedClient.PutAsJsonAsync("/api/pets/1", request);
+            using var message = WriteRequest(HttpMethod.Put, "/api/pets/1", request, scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             var pet = await _client.GetFromJsonAsync<PetResponse>("/api/pets/1");
@@ -219,15 +257,39 @@ namespace Animal.IntegrationTests.Api
         {
             var request = new UpdatePetRequest { Name = "Ghost", Species = "Cat", Age = 2, ShelterId = 1 };
 
-            var response = await _authenticatedClient.PutAsJsonAsync("/api/pets/999", request);
+            using var message = WriteRequest(HttpMethod.Put, "/api/pets/999", request, scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         [Fact]
+        public async Task UpdatePet_WithoutAuthentication_Returns401()
+        {
+            var request = new UpdatePetRequest { Name = "Ghost", Species = "Cat", Age = 2, ShelterId = 1 };
+
+            using var message = WriteRequest(HttpMethod.Put, "/api/pets/1", request);
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task UpdatePet_WithoutWritePermission_Returns403()
+        {
+            var request = new UpdatePetRequest { Name = "Ghost", Species = "Cat", Age = 2, ShelterId = 1 };
+
+            using var message = WriteRequest(HttpMethod.Put, "/api/pets/1", request, scope: "pets.read");
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
         public async Task DeletePet_Existing_ReturnsNoContentAndRemovesIt()
         {
-            var response = await _authenticatedClient.DeleteAsync("/api/pets/3");
+            using var message = WriteRequest(HttpMethod.Delete, "/api/pets/3", scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
             Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
             Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync("/api/pets/3")).StatusCode);
@@ -236,9 +298,28 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task DeletePet_Missing_ReturnsNotFound()
         {
-            var response = await _authenticatedClient.DeleteAsync("/api/pets/999");
+            using var message = WriteRequest(HttpMethod.Delete, "/api/pets/999", scope: "pets.write");
+            using var response = await _client.SendAsync(message);
 
             Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeletePet_WithoutAuthentication_Returns401()
+        {
+            using var message = WriteRequest(HttpMethod.Delete, "/api/pets/1");
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeletePet_WithoutWritePermission_Returns403()
+        {
+            using var message = WriteRequest(HttpMethod.Delete, "/api/pets/1", scope: "pets.read");
+            using var response = await _client.SendAsync(message);
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         }
 
         // The Restrict foreign key blocks the delete, and DomainExceptionHandler turns the DbUpdateException into a 409.
@@ -255,7 +336,8 @@ namespace Animal.IntegrationTests.Api
 
             try
             {
-                var response = await _authenticatedClient.DeleteAsync("/api/pets/1");
+                using var request = WriteRequest(HttpMethod.Delete, "/api/pets/1", scope: "pets.write");
+                using var response = await _client.SendAsync(request);
 
                 Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
                 Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);

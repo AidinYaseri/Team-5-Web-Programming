@@ -24,8 +24,10 @@ identity provider decision is finalized.
 
 ## Authorization code + PKCE flow
 
-The intended client flow is authorization code with Proof Key for Code
-Exchange (PKCE):
+The client flow is authorization code with Proof Key for Code Exchange (PKCE),
+implemented in `src/Animal.Client/Program.cs` with the ASP.NET Core OpenID Connect
+handler (`ResponseType = code`, `UsePkce = true`, `SaveTokens = true`). Every typed
+API client attaches the access token through `AccessTokenHandler`:
 
 1. `Animal.Client` creates a random code verifier and its corresponding code
    challenge.
@@ -49,8 +51,16 @@ Exchange (PKCE):
    policies evaluate the request.
 
 The identity provider and final provider-specific client settings are not
-chosen yet. No provider credentials or client secrets are included in this
+chosen yet, so sign-in stays off until `Authentication:Authority` and
+`Authentication:ClientId` are set for `Animal.Client`. The client secret is read
+from configuration on the server only (user-secrets locally) and is never sent to
+the browser. No provider credentials or client secrets are included in this
 repository.
+
+Known follow-up: the browser fetches the access token from the client's own
+`/auth/access-token` endpoint (`wwwroot/auth.js`) before `AccessTokenHandler` uses
+it, so the token is readable by page JavaScript. Keeping it server-side only
+(Blazor Server can read the saved token during the request) would reduce exposure.
 
 ## API token validation
 
@@ -120,27 +130,38 @@ scope strings expected in the token.
 
 ## Endpoint-to-policy map currently in the code
 
-The controller metadata currently present in `PetsController` is:
+Every controller action has an explicit attribute; anything else falls back to "signed-in user required"
+(`ControllerEndpoints_HaveExplicitAuthorizationMetadata` checks this).
 
 | Method | Endpoint | Authorization |
 |---|---|---|
-| `GET` | `/api/pets` | Public: `[AllowAnonymous]` |
-| `GET` | `/api/pets/{id}` | Public: `[AllowAnonymous]` |
-| `POST` | `/api/pets` | `[Authorize(Policy = AuthorizationPolicies.PetsWrite)]` |
-| `PUT` | `/api/pets/{id}` | `[Authorize(Policy = AuthorizationPolicies.PetsWrite)]` |
-| `DELETE` | `/api/pets/{id}` | `[Authorize(Policy = AuthorizationPolicies.PetsWrite)]` |
+| `GET` | `/api/pets`, `/api/pets/{id}` | Public: `[AllowAnonymous]` |
+| `POST`, `PUT`, `DELETE` | `/api/pets`, `/api/pets/{id}` | `pets.write` |
+| `GET` | `/api/shelters`, `/api/shelters/{id}`, `/api/shelters/{id}/pets` | Public: `[AllowAnonymous]` |
+| `POST`, `PUT`, `DELETE` | `/api/shelters`, `/api/shelters/{id}` | `shelters.write` |
+| `GET` | `/api/users/me` | `users.read` |
+| `PUT` | `/api/users/me` | `users.write` |
+| `GET` | `/api/appointments` | `appointments.read` + mapped local user |
+| `POST` | `/api/appointments`, `/api/appointments/{id}/cancel` | `appointments.write` + mapped local user |
+| `GET` | `/api/notifications` | `notifications.read` + mapped local user |
+| `POST` | `/api/notifications/{id}/read` | `notifications.read` + mapped local user |
+| `GET` | `/openapi/v1.json` (Development only) | Public: `AllowAnonymous()` |
 
-The other named policies are registered in `Program.cs`, but no controller
-actions using those policies are present in the code reviewed for this
-milestone. Their endpoint mappings will be added with their corresponding
-controllers.
+`adoptions.read`, `adoptions.write` and `adoptions.review` are registered and will be applied by WI-9.
 
 ## Current-user identity
 
-`HttpCurrentUser` reads only the `sub` claim from `HttpContext.User`. It does
-not accept an identity from a request body, header, or route. Accessing the
-subject without a `sub` claim throws an `InvalidOperationException` with a
-message identifying the missing claim.
+`ICurrentUser` is the only way services learn who is calling:
+
+- `Subject` is the token's `sub` claim. `UsersController` uses it to find or create the caller's own profile
+  (`User.ExternalId`).
+- `UserId` is the local `Users.Id`. `SubjectToUserIdClaimsTransformation` looks the `sub` up in `Users.ExternalId` on
+  each authenticated request and adds it as a `local_user_id` claim. Any `local_user_id` claim already in the token is
+  removed first, so a token can't choose its own user. Appointments and notifications use `UserId`.
+
+Nothing is read from a request body, header or route. A signed-in user without a profile gets 403 on the appointments
+and notifications policies (they require a mapped user) until they create one with `PUT /api/users/me`.
+`NotificationsEndpointTests` covers this, including two tests that send a forged `local_user_id` claim.
 
 ## Secret handling
 
@@ -188,8 +209,10 @@ The following tests run against the real `Program.cs` through
 The whole solution test run completed with:
 
 ```text
-124 passed
-63 unit tests
-61 integration tests
+216 passed
+112 unit tests
+104 integration tests
 0 failed
 ```
+
+(After merging WI-4, WI-6, WI-7, WI-10 and WI-11 into the milestone branch. The WI-3 PR itself had 124.)

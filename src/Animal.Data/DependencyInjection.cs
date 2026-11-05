@@ -15,8 +15,11 @@ namespace Animal.Data
             services.AddDbContext<AnimalDbContext>(options => options.UseSqlServer(connectionString));
             services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AnimalDbContext>());
             services.AddScoped<IPetRepository, PetRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IShelterRepository, ShelterRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<INotificationRepository, NotificationRepository>();
+            services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 
             return services;
         }

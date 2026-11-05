@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, feature/milestone-3-layered-service-development]
 
 permissions:
   contents: read
@@ -32,13 +32,8 @@ jobs:
       - name: Run tests
         run: dotnet test Team-5-Web-Programming.slnx --no-build --configuration Release --verbosity normal
 
-      # Run migration verification only when EF Core packages are present.
       - name: Verify EF Core migrations
         run: |
-          if grep -Rqs "Microsoft.EntityFrameworkCore" src --include="*.csproj"; then
-            dotnet tool install --global dotnet-ef --version 10.*
-            export PATH="$PATH:$HOME/.dotnet/tools"
-            dotnet ef migrations script --idempotent --configuration Release --output migrations.sql --project src/Animal.Data/Animal.Data.csproj --startup-project src/Animal.API/Animal.API.csproj
-          else
-            echo "No EF Core package references found; skipping migration verification."
-          fi
+          dotnet tool install --global dotnet-ef --version 10.*
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          dotnet ef migrations script --idempotent --configuration Release --output migrations.sql --project src/Animal.Data/Animal.Data.csproj --startup-project src/Animal.Data/Animal.Data.csproj

@@ -29,8 +29,8 @@ namespace Animal.UnitTests.Client
             Assert.Equal(new UserResponse(4, "Sam", "sam@example.com", "555-0100"), result);
         }
 
-        // The API answers 401 with an empty body, so the message falls back to the status code.
-        // The profile page relies on this exception to show "Please sign in".
+        // The API answers 401 with an empty body, so ApiResponse uses its readable fallback message.
+        // The profile page relies on this exception's status code to show "Please sign in".
         [Fact]
         public async Task GetMyProfileAsync_Unauthorized_ThrowsWithStatusCode()
         {
@@ -40,8 +40,8 @@ namespace Animal.UnitTests.Client
             var exception = await Assert.ThrowsAsync<ApiException>(() => client.GetMyProfileAsync());
 
             Assert.Equal(HttpStatusCode.Unauthorized, exception.StatusCode);
-            Assert.Empty(exception.Errors);
-            Assert.Equal("The API returned 401.", exception.Message);
+            Assert.Equal(["Sign in to continue."], exception.Errors);
+            Assert.Equal("Sign in to continue.", exception.Message);
         }
 
         [Theory]
