@@ -8,6 +8,7 @@ flowchart LR
         Pets[PetsController]
         Appointments[AppointmentsController]
         Notifications[NotificationsController]
+        Auth[JWT bearer + scope policies]
         Services[Application services]
     end
 
@@ -20,6 +21,8 @@ flowchart LR
 
     subgraph DATA["Animal.Data · EF Core"]
         Repos[Repositories]
+        UserRepo[UserRepository · ExternalId lookup]
+        UnitOfWork[IUnitOfWork]
         Context[AnimalDbContext<br/>Configurations and migrations]
     end
 
@@ -28,6 +31,9 @@ flowchart LR
     Browser <-->|interactive UI and sign-in cookie| Client
     Client <-->|OIDC authorization code + PKCE| Identity
     Client -->|HTTP / JSON + bearer access token| API
+    Auth -->|validated sub| UserRepo
+    UserRepo -->|local user ID| Auth
+    Auth -->|authorized requests| Services
     Pets --> Services
     Appointments --> Services
     Notifications --> Services
@@ -36,5 +42,7 @@ flowchart LR
     Services --> NotificationRules
     Services --> Entities
     Services --> Repos
+    Services --> UnitOfWork
+    UnitOfWork -->|one save for related changes| Context
     Repos --> Context
     Context --> Database

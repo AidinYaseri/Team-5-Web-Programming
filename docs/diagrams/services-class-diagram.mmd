@@ -24,6 +24,21 @@ classDiagram
     class PetService
     class AppointmentService
     class NotificationService
+    class SubjectToUserIdClaimsTransformation {
+        +TransformAsync(principal) ClaimsPrincipal
+    }
+    class HttpCurrentUser {
+        +UserId int
+    }
+    class IUserRepository {
+        <<interface>>
+        +GetByExternalIdAsync(sub, token) Task~User~
+    }
+    class UserRepository
+    class IUnitOfWork {
+        <<interface>>
+        +SaveChangesAsync(token) Task~int~
+    }
     class IAppointmentRepository {
         <<interface>>
         +GetForUserAsync(userId, token)
@@ -40,6 +55,11 @@ classDiagram
     IPetService <|.. PetService
     IAppointmentService <|.. AppointmentService
     INotificationService <|.. NotificationService
+    IUserRepository <|.. UserRepository
     AppointmentService --> IAppointmentRepository
     AppointmentService --> INotificationService : creates booking updates
+    AppointmentService --> IUnitOfWork : saves appointment and notification once
     NotificationService --> INotificationRepository
+    NotificationService --> IUnitOfWork : saves read status changes
+    SubjectToUserIdClaimsTransformation --> IUserRepository : maps sub to ExternalId
+    HttpCurrentUser --> SubjectToUserIdClaimsTransformation : reads local-user claim

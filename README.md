@@ -24,7 +24,9 @@ flowchart LR
     Browser[Browser]
     Client[Animal.Client<br/>Blazor Server]
     Identity[OIDC identity provider]
-    API[Animal.API<br/>REST + bearer authorization]
+    API[Animal.API<br/>REST endpoints]
+    Auth[JWT bearer + scope policies]
+    Subject[Resolve token sub to User.ExternalId]
     Services[Application services]
     Domain[Animal.Domain<br/>entities + rules]
     Data[Animal.Data<br/>EF Core repositories]
@@ -33,6 +35,9 @@ flowchart LR
     Browser <-->|interactive UI + cookie| Client
     Client <-->|authorization code + PKCE| Identity
     Client -->|HTTP / JSON + bearer token| API
+    API --> Auth
+    Auth --> Subject
+    Subject --> Data
     API --> Services
     Services --> Domain
     Services --> Data
