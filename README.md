@@ -89,6 +89,8 @@ dotnet run --project src/Animal.Client
 
 The client listens on `http://localhost:5012` and uses `AnimalApi:BaseUrl` from its configuration to reach the API. Browse pets without signing in. To enable sign-in, configure an OIDC authority and client ID for the client and the matching authority/audience for the API. Keep any client secret in user-secrets or an environment variable; never put it in browser code or committed settings.
 
+In Visual Studio, you can start both processes together by right-clicking the solution, choosing **Configure Startup Projects**, selecting **Multiple startup projects**, and setting both `Animal.API` and `Animal.Client` to **Start**. The API must be listening on `http://localhost:5015` before the client loads API-backed pages.
+
 For local OIDC configuration, set values with user-secrets from the repository root:
 
 ```powershell
@@ -98,7 +100,7 @@ dotnet user-secrets set "Authentication:ClientId" "your-client-id" --project src
 dotnet user-secrets set "Authentication:ClientSecret" "your-server-side-secret" --project src/Animal.Client
 ```
 
-Set the provider's API scopes with `Authentication:Scopes` and align the API's `Authentication:Authority` and `Authentication:Audience` settings. The local API CORS origin is configurable through `Cors:ClientOrigin` (Development defaults to `http://localhost:5012`).
+Set the provider's API scopes with `Authentication:Scopes` and align the API's `Authentication:Authority` and `Authentication:Audience` settings. The API maps the validated token's `sub` to the local user's `ExternalId`; the provider does not need to send the database's numeric user ID. The local API CORS origin is configurable through `Cors:ClientOrigin` (Development defaults to `http://localhost:5012`).
 
 ## Data and tests
 

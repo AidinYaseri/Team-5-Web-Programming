@@ -10,7 +10,7 @@ These block parts of the plan, so settle them before Phase 1.
 
 | # | Decision | Default in this plan | Blocks |
 |---|---|---|---|
-| D1 | Frontend stack: React or ASP.NET Core (Blazor/Razor) | React + TypeScript (Vite) in `src/Animal.Client` | WI-4, all slice client tasks |
+| D1 | Frontend stack | ASP.NET Core Blazor Server on .NET 10 in `src/Animal.Client` | WI-4, all slice client tasks |
 | D2 | Identity provider: Entra ID, Auth0, Keycloak or Duende (check Lecture 09) | Whatever Lecture 09 uses. Tests use locally signed test tokens either way | WI-3 |
 | D3 | "Two independently runnable services per team member": one API host or several | Ask the teacher. Until then, one `Animal.API` host with six vertical slices, two per member | Solution layout |
 | D4 | Where work items and PRs live | **Decided: GitHub** (Issues + Projects + PRs). The spec says to submit an Azure DevOps PR link on Léa, so confirm with the teacher that a GitHub PR link is accepted | WI-1, WI-12 |
@@ -82,9 +82,9 @@ Each slice work item follows the spec's 6-task hierarchy: Domain, Data, Contract
 - **Owner (proposed):** Chloe
 - **Story:** As an adopter, I want a web page to browse pets and sign in.
 - **Tasks**
-  1. Create `src/Animal.Client` (React + Vite + TypeScript, or the D1 choice) and add it to the solution or README run steps.
-  2. Add the auth-code + PKCE sign-in with the provider's SPA library (no client secret in the browser).
-  3. Add a typed API client (`fetch`/`axios`) that attaches the access token and handles 401/403/400/500 errors in a user-friendly way.
+  1. Create `src/Animal.Client` using the D1 choice and add it to the solution and README run steps.
+  2. Add server-side OIDC authorization-code sign-in with PKCE; keep any client secret in server-side configuration.
+  3. Add typed `HttpClient` services with a shared token handler and readable handling for 400/401/403/404/409/500 responses.
   4. Add routing, a layout and a navbar with sign-in/out, plus CORS for the client origin in the API.
   5. Build the public "Browse pets" page against `GET /api/pets` as the first end-to-end check.
 - **Acceptance criteria:** the client runs locally, signs in, calls a protected endpoint successfully, and never references `Animal.Data` or the database.
