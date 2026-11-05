@@ -29,7 +29,7 @@ namespace Animal.IntegrationTests.Api
         }
 
         private static CreatePetRequest NewPet() =>
-            new() { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, IsAvailable = true, ShelterId = 2 };
+            new() { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, ShelterId = 2 };
 
         private async Task<int[]> GetIdsAsync(string url)
         {
@@ -246,7 +246,7 @@ namespace Animal.IntegrationTests.Api
             using (var scope = _factory.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<AnimalDbContext>();
-                context.Users.Add(new User { Id = 1, Name = "Test User", Email = "test.user@example.com", PhoneNumber = "555-0199" });
+                context.Users.Add(new User { Id = 1, ExternalId = "1", Name = "Test User", Email = "test.user@example.com", PhoneNumber = "555-0199" });
                 context.AdoptionApplications.Add(new AdoptionApplication { UserId = 1, PetId = 1, ApplicationDate = DateTime.UtcNow });
                 context.SaveChanges();
             }

@@ -2,6 +2,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Animal.IntegrationTests/Animal.IntegrationTests.csproj" />
     <Project Path="tests/Animal.UnitTests/Animal.UnitTests.csproj" />
+    <Project Path="tests/Animal.Domain.Tests/Animal.Domain.Tests.csproj" />
   </Folder>
   <Project Path="src/Animal.API/Animal.API.csproj" />
   <Project Path="src/Animal.Client/Animal.Client.csproj" />

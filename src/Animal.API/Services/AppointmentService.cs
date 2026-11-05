@@ -9,6 +9,7 @@ namespace Animal.API.Services
     public sealed class AppointmentService(
         IAppointmentRepository appointments,
         INotificationService notifications,
+        IUnitOfWork unitOfWork,
         TimeProvider timeProvider) : IAppointmentService
     {
         public async Task<IReadOnlyList<AppointmentResponse>> GetForUserAsync(int userId, CancellationToken cancellationToken = default)
@@ -42,6 +43,7 @@ namespace Animal.API.Services
 
             appointments.Add(appointment);
             await notifications.CreateAsync(userId, $"Your visit for pet {request.PetId} is scheduled for {appointment.AppointmentDate:O}.", cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return AppointmentResponse.FromEntity(appointment);
         }
@@ -56,6 +58,7 @@ namespace Animal.API.Services
 
             AppointmentRules.Cancel(appointment);
             await notifications.CreateAsync(userId, $"Your visit for pet {appointment.PetId} on {appointment.AppointmentDate:O} was cancelled.", cancellationToken);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
             return true;
         }
     }

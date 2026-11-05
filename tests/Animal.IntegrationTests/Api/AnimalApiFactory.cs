@@ -64,7 +64,12 @@ namespace Animal.IntegrationTests.Api
             context.Appointments.RemoveRange(context.Appointments);
             context.Users.RemoveRange(context.Users);
             context.SaveChanges();
-            context.Users.AddRange(users);
+            var userRows = users.ToList();
+            foreach (var user in userRows.Where(user => string.IsNullOrWhiteSpace(user.ExternalId)))
+            {
+                user.ExternalId = user.Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            context.Users.AddRange(userRows);
             context.SaveChanges();
             if (notifications is not null) context.Notifications.AddRange(notifications);
             if (appointments is not null) context.Appointments.AddRange(appointments);

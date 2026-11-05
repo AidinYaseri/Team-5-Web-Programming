@@ -36,7 +36,7 @@ if (identityConfigured)
         options.GetClaimsFromUserInfoEndpoint = true;
         options.Scope.Clear();
         foreach (var scope in (builder.Configuration["Authentication:Scopes"] ??
-                     "openid profile notifications.read notifications.write appointments.read appointments.write")
+                     "openid profile notifications.read appointments.read appointments.write")
                      .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             options.Scope.Add(scope);

@@ -1,6 +1,8 @@
-﻿using Animal.API.ErrorHandling;
+using Animal.API.Authorization;
+using Animal.API.ErrorHandling;
 using Animal.API.Services;
 using Animal.Data;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +20,7 @@ builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
 }));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddTransient<IClaimsTransformation, SubjectToUserIdClaimsTransformation>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -26,11 +29,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         options.MapInboundClaims = false;
     });
-builder.Services.AddAuthorizationBuilder()
-    .AddPolicy("notifications.read", policy => policy.RequireAssertion(context => HasUserId(context.User) && HasScope(context.User, "notifications.read")))
-    .AddPolicy("notifications.write", policy => policy.RequireAssertion(context => HasUserId(context.User) && HasScope(context.User, "notifications.write")))
-    .AddPolicy("appointments.read", policy => policy.RequireAssertion(context => HasUserId(context.User) && HasScope(context.User, "appointments.read")))
-    .AddPolicy("appointments.write", policy => policy.RequireAssertion(context => HasUserId(context.User) && HasScope(context.User, "appointments.write")));
+builder.Services.AddAuthorization(AuthorizationPolicies.Configure);
 
 // LocalDB by default (no password). Override with user-secrets or the ConnectionStrings__AnimalDb environment variable.
 var connectionString = builder.Configuration.GetConnectionString("AnimalDb")
@@ -41,7 +40,7 @@ builder.Services.AddAnimalData(connectionString);
 builder.Services.AddScoped<IPetService, PetService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
-builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
@@ -67,11 +66,3 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
-
-static bool HasScope(System.Security.Claims.ClaimsPrincipal user, string requiredScope) =>
-    user.FindAll("scope").Concat(user.FindAll("scp"))
-        .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        .Contains(requiredScope, StringComparer.Ordinal);
-
-static bool HasUserId(System.Security.Claims.ClaimsPrincipal user) =>
-    int.TryParse(user.FindFirst("user_id")?.Value, out var userId) && userId > 0;

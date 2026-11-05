@@ -6,14 +6,14 @@ namespace Animal.API.Contracts
     public class UpdatePetRequest
     {
         [Required]
-        [StringLength(100)]
+        [StringLength(50)]
         public string Name { get; set; } = string.Empty;
 
         [Required]
         [StringLength(50)]
         public string Species { get; set; } = string.Empty;
 
-        [StringLength(100)]
+        [StringLength(50)]
         public string? Breed { get; set; }
 
         [Range(0, 100)]

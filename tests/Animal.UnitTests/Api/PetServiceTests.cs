@@ -22,7 +22,7 @@ namespace Animal.UnitTests.Api
         }
 
         private static CreatePetRequest NewPet() =>
-            new() { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, IsAvailable = true, ShelterId = 2 };
+            new() { Name = "Nugget", Species = "Rabbit", Breed = "Mini Rex", Age = 1, ShelterId = 2 };
 
         [Fact]
         public async Task SearchPetsAsync_PassesTheFiltersToTheRepository()

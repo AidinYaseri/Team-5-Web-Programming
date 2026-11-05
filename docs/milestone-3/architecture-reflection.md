@@ -6,7 +6,7 @@ We kept the client in the stack already present in the repository: ASP.NET Core 
 
 Sign-in is designed around the OIDC authorization-code flow with PKCE. The OIDC exchange runs on the server; a client secret, if the chosen provider requires one, belongs in server-side user-secrets or environment configuration. The API access token is forwarded by a shared HTTP handler. This choice fits the existing .NET solution and avoids adding a second frontend build toolchain. The trade-off is that UI interactions depend on the server-side Blazor circuit and the client needs an identity provider configured before sign-in can work end to end.
 
-The frontend development agent supports the existing Razor/Blazor stack and requires HTTP-only API access, validation, loading and error states. The testing agent confines its changes to `tests/` and calls out deterministic test data. Those constraints shaped the implementation and test additions. The API still needs the identity-provider settings and the trusted `user_id` claim mapping from the authentication/profile work before the protected flows can be exercised with a real provider.
+The frontend development agent supports the existing Razor/Blazor stack and requires HTTP-only API access, validation, loading and error states. The testing agent confines its changes to `tests/` and calls out deterministic test data. Those constraints shaped the implementation and test additions. The API resolves the validated token's `sub` to `User.ExternalId` and adds an internal local-user claim; real protected flows still need the identity-provider issuer, audience, and client settings configured.
 
 ## Persistence — Chloe draft, pending Darcy's notes
 

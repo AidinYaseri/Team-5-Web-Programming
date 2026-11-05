@@ -51,7 +51,7 @@ namespace Animal.API.Services
                 Species = request.Species.Trim(),
                 Breed = request.Breed?.Trim() ?? string.Empty,
                 Age = request.Age,
-                IsAvailable = request.IsAvailable,
+                IsAvailable = true,
                 ShelterId = request.ShelterId
             };
 

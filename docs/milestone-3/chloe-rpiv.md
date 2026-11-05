@@ -31,6 +31,6 @@ This log records the local work for WI-4, WI-11, and WI-10. No GitHub issue was 
 - `dotnet build src/Animal.API/Animal.API.csproj --no-restore -p:MSBuildEnableWorkloadResolver=false -m:1` succeeded with zero warnings and errors.
 - Both test projects compiled with zero warnings and errors; tests have been authored but not run.
 - A solution-wide build could not run because this installed SDK is missing its workload resolver locator. Individual project builds succeeded with the resolver disabled.
-- Real OIDC sign-in still needs an identity provider configured. Aiden's identity-provider settings must supply the issuer/audience and map a validated token to the trusted numeric `user_id` claim used by the owner-scoped endpoints.
+- Real OIDC sign-in still needs an identity provider configured. Aiden's identity-provider settings must supply the issuer and audience. The API maps the validated token's `sub` to `User.ExternalId`, then uses an internal local-user claim for owner-scoped endpoints.
 - The updated Mermaid sources were not rendered to PNG because no Mermaid CLI is installed in this environment.
 - The milestone page linked in the assignment could not be retrieved in this environment; the generic-controller lab page was reviewed as reference material.

@@ -27,7 +27,7 @@ namespace Animal.IntegrationTests.Api
                 return Task.FromResult(AuthenticateResult.Fail("The test token needs a positive user ID."));
             }
 
-            var claims = new List<Claim> { new("user_id", userId.ToString()) };
+            var claims = new List<Claim> { new("sub", userId.ToString(System.Globalization.CultureInfo.InvariantCulture)) };
             if (values.Length > 1)
             {
                 claims.Add(new Claim("scope", values[1]));

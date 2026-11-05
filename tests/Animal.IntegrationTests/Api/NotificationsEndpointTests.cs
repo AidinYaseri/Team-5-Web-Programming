@@ -67,7 +67,7 @@ namespace Animal.IntegrationTests.Api
         [Fact]
         public async Task MarkAsRead_CanBeCalledTwiceAndOtherUsersRowIsHidden()
         {
-            UseTestToken(41, "notifications.write");
+            UseTestToken(41, "notifications.read");
 
             var first = await _client.PostAsync("/api/notifications/101/read", content: null);
             var second = await _client.PostAsync("/api/notifications/101/read", content: null);

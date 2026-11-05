@@ -16,7 +16,7 @@ namespace Animal.API.Controllers
             notifications.GetForUserAsync(currentUser.UserId, unreadOnly, cancellationToken);
 
         [HttpPost("{id:int}/read")]
-        [Authorize(Policy = "notifications.write")]
+        [Authorize(Policy = "notifications.read")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> MarkAsRead(int id, CancellationToken cancellationToken)

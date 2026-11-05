@@ -17,7 +17,7 @@ namespace Animal.API.Services
             return results.Select(NotificationResponse.FromEntity).ToList();
         }
 
-        public async Task CreateAsync(int userId, string message, CancellationToken cancellationToken = default)
+        public Task CreateAsync(int userId, string message, CancellationToken cancellationToken = default)
         {
             if (userId <= 0)
             {
@@ -32,7 +32,8 @@ namespace Animal.API.Services
                 IsRead = false
             });
 
-            await unitOfWork.SaveChangesAsync(cancellationToken);
+            // The operation that owns the broader transaction saves after all related changes are staged.
+            return Task.CompletedTask;
         }
 
         public async Task<bool> MarkAsReadAsync(int userId, int notificationId, CancellationToken cancellationToken = default)
