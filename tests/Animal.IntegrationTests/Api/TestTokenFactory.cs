@@ -22,7 +22,8 @@ public sealed class TestTokenFactory : IDisposable
         IEnumerable<string>? scopes = null,
         string scopeClaimType = "scope",
         RSA? signingKey = null,
-        IEnumerable<Claim>? extraClaims = null)
+        IEnumerable<Claim>? extraClaims = null,
+        IEnumerable<string>? roles = null)
     {
         var claims = new List<Claim>(extraClaims ?? []);
         if (subject is not null)
@@ -33,6 +34,12 @@ public sealed class TestTokenFactory : IDisposable
         if (scopes is not null)
         {
             claims.Add(new Claim(scopeClaimType, string.Join(' ', scopes)));
+        }
+
+        // One claim per role, like Keycloak's flat "roles" array.
+        foreach (var role in roles ?? [])
+        {
+            claims.Add(new Claim("roles", role));
         }
 
         var expiration = (expiresAt ?? DateTimeOffset.UtcNow.AddMinutes(30)).UtcDateTime;

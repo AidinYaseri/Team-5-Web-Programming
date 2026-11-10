@@ -63,16 +63,19 @@ namespace Animal.IntegrationTests.Api
 
         public HttpClient CreateAuthenticatedClient()
         {
-            return CreateAuthenticatedClient("test-subject", ["pets.write"]);
+            return CreateAuthenticatedClient("test-subject", ["pets.write"], StaffRoles);
         }
 
-        public HttpClient CreateAuthenticatedClient(string subject, IEnumerable<string> scopes)
+        // Staff operations (pets.write, shelters.write, adoptions.review) need this role as well as the scope.
+        public static readonly string[] StaffRoles = ["staff"];
+
+        public HttpClient CreateAuthenticatedClient(string subject, IEnumerable<string> scopes, IEnumerable<string>? roles = null)
         {
             var client = CreateClient();
             client.DefaultRequestHeaders.Authorization =
                 new System.Net.Http.Headers.AuthenticationHeaderValue(
                     "Bearer",
-                    _tokenFactory.CreateToken(subject: subject, scopes: scopes));
+                    _tokenFactory.CreateToken(subject: subject, scopes: scopes, roles: roles));
             return client;
         }
 
@@ -84,7 +87,8 @@ namespace Animal.IntegrationTests.Api
             IEnumerable<string>? scopes = null,
             string scopeClaimType = "scope",
             RSA? signingKey = null,
-            IEnumerable<System.Security.Claims.Claim>? extraClaims = null) =>
+            IEnumerable<System.Security.Claims.Claim>? extraClaims = null,
+            IEnumerable<string>? roles = null) =>
             _tokenFactory.CreateToken(
                 issuer,
                 audience,
@@ -93,7 +97,8 @@ namespace Animal.IntegrationTests.Api
                 scopes,
                 scopeClaimType,
                 signingKey,
-                extraClaims);
+                extraClaims,
+                roles);
 
         // Builds the schema and the HasData seed rows (2 shelters, 5 pets) once the host exists.
         protected override IHost CreateHost(IHostBuilder builder)
