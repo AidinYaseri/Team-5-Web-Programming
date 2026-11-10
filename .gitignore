@@ -38,3 +38,6 @@ appsettings.*.local.json
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Local secrets (Keycloak admin password etc.). Commit the .env.example files only.
+.env
