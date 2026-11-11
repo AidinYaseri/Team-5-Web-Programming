@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @inject AdoptionsApiClient Api
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AccessTokenProvider AccessTokenProvider
 
 <PageTitle>Review applications</PageTitle>
 <h1>Review adoption applications</h1>
@@ -51,7 +50,6 @@
         _loaded = true;
         if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
         {
-            await AccessTokenProvider.RefreshAsync();
             await LoadAsync();
             StateHasChanged();
         }

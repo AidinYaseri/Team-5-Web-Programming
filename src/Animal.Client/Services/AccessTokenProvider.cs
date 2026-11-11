@@ -1,36 +1,37 @@
-using Microsoft.JSInterop;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Animal.Client.Services
 {
-    public sealed class AccessTokenProvider(IJSRuntime jsRuntime)
+    // Reads the signed-in user's access token on the server, from the encrypted auth cookie (SaveTokens = true).
+    // The token never goes to the browser: there is no token endpoint and no JavaScript that reads it (decision D4).
+    // With interactive server rendering, HttpContext is the request that opened the Blazor connection, which carries
+    // the same auth cookie, so this works for both the first render and later interactive calls.
+    public sealed class AccessTokenProvider(IHttpContextAccessor httpContextAccessor, TimeProvider timeProvider)
     {
-        private string? _accessToken;
-
-        public async ValueTask<string?> GetTokenAsync(CancellationToken cancellationToken = default)
+        public async Task<string?> GetTokenAsync(CancellationToken cancellationToken = default)
         {
-            if (!string.IsNullOrWhiteSpace(_accessToken)) return _accessToken;
+            cancellationToken.ThrowIfCancellationRequested();
 
-            try
+            var context = httpContextAccessor.HttpContext;
+            if (context is null)
             {
-                _accessToken = await jsRuntime.InvokeAsync<string?>("animalAuth.getAccessToken", cancellationToken);
-                return _accessToken;
-            }
-            catch (JSException)
-            {
-                // During static rendering JS interop isn't available. Public pages can still call the API.
                 return null;
             }
-            catch (InvalidOperationException)
+
+            var result = await context.AuthenticateAsync();
+            if (!result.Succeeded)
             {
-                // Blazor Server also throws InvalidOperationException when prerendering hasn't become interactive yet.
-                // The unauthenticated pet browse endpoint remains usable during that first render.
                 return null;
             }
-        }
 
-        public async Task RefreshAsync(CancellationToken cancellationToken = default)
-        {
-            _accessToken = await jsRuntime.InvokeAsync<string?>("animalAuth.getAccessToken", cancellationToken);
+            // An expired token would only get a 401 from the API. Treat it as signed out instead.
+            if (AccessTokenLifetime.IsExpired(result.Properties, timeProvider.GetUtcNow()))
+            {
+                return null;
+            }
+
+            var token = result.Properties?.GetTokenValue("access_token");
+            return string.IsNullOrWhiteSpace(token) ? null : token;
         }
     }
 }

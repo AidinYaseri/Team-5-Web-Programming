@@ -50,17 +50,20 @@ API client attaches the access token through `AccessTokenHandler`:
 8. `Animal.API`'s JWT bearer handler validates the token before authorization
    policies evaluate the request.
 
-The identity provider and final provider-specific client settings are not
-chosen yet, so sign-in stays off until `Authentication:Authority` and
-`Authentication:ClientId` are set for `Animal.Client`. The client secret is read
-from configuration on the server only (user-secrets locally) and is never sent to
-the browser. No provider credentials or client secrets are included in this
+Since Milestone 4 the identity provider is a local Keycloak (setup:
+`docs/milestone-4/identity-provider-setup.md`). The client secret is read from
+configuration on the server only (user-secrets locally) and is never sent to the
+browser. No provider credentials or client secrets are included in this
 repository.
 
-Known follow-up: the browser fetches the access token from the client's own
-`/auth/access-token` endpoint (`wwwroot/auth.js`) before `AccessTokenHandler` uses
-it, so the token is readable by page JavaScript. Keeping it server-side only
-(Blazor Server can read the saved token during the request) would reduce exposure.
+The access token stays on the server (WI-3, decision D4). The OIDC handler saves
+it in the encrypted, `HttpOnly` auth cookie, and `AccessTokenProvider` reads it
+there on the server for each API call (`AccessTokenHandler`). The old
+`/auth/access-token` endpoint and `wwwroot/auth.js` were removed, so page
+JavaScript can't read the token. The cookie lasts 30 minutes, doesn't slide, and
+is rejected as soon as the access token inside it has expired
+(`AuthCookieEvents`). Sign-out (`POST /auth/logout`, antiforgery-checked) clears
+the cookie and ends the Keycloak session for that device only.
 
 ## API token validation
 

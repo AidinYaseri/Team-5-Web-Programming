@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @inject AdoptionsApiClient Api
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AccessTokenProvider AccessTokenProvider
 
 <PageTitle>My applications</PageTitle>
 <h1>My adoption applications</h1>
@@ -32,14 +31,13 @@
     private string? _error;
     private bool _loaded;
 
-    // Protected calls wait for the interactive render, when the access token can be read (see AccessTokenProvider).
+    // Protected calls run after the first render, once the user's sign-in state is known.
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender || _loaded) return;
         _loaded = true;
         if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
         {
-            await AccessTokenProvider.RefreshAsync();
             await LoadAsync();
             StateHasChanged();
         }
