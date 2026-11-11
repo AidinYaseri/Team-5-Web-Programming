@@ -79,11 +79,13 @@ The role comes from the token the API validated, never from the client. WI-2 add
 
 | Lifetime | Value |
 |---|---|
-| Access token | 5 minutes (Keycloak default) |
-| Client cookie | 60 minutes sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development (WI-3 sets this; the default today is 14 days) |
+| Access token | 30 minutes (`accessTokenLifespan` in the realm file) |
+| Client cookie | 30 minutes, **not** sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development. Rejected as soon as the access token inside it has expired |
 | Keycloak SSO session | 30 minutes idle, 10 hours max (defaults) |
 
-Refreshing an expired access token is out of scope. When it expires, the user signs in again. This goes in the threat model as a known limit.
+Refreshing an expired access token is out of scope. When it expires, the cookie is rejected and the user signs in again (silently, without a password, while the Keycloak session is still active). This goes in the threat model as a known limit.
+
+**Changed in WI-3:** the access token was 5 minutes. Without refresh, that signed users out every 5 minutes. It's 30 minutes now, which is safe enough because the token no longer leaves the server (D4), and the cookie can't outlive it.
 
 ## D6: Picture formats and limits
 
