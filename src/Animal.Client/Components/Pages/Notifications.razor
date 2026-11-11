@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @inject NotificationsApiClient Api
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AccessTokenProvider AccessTokenProvider
 @inject NotificationCountState NotificationCountState
 
 <PageTitle>Notifications</PageTitle>
@@ -41,7 +40,6 @@
         _loaded = true;
         if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
         {
-            await AccessTokenProvider.RefreshAsync();
             await LoadAsync();
             StateHasChanged();
         }
