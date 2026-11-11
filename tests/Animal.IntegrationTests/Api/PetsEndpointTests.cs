@@ -54,7 +54,7 @@ namespace Animal.IntegrationTests.Api
 
             if (scope is not null)
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: [scope]));
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: [scope], roles: AnimalApiFactory.StaffRoles));
             }
 
             return request;

@@ -28,6 +28,8 @@ if (identityConfigured)
     {
         options.Authority = authority;
         options.ClientId = clientId;
+        // The local Keycloak runs on plain http, which is only allowed in Development (same rule as the API).
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         // Keep this value in user-secrets or an environment variable; it is only used server-side.
         options.ClientSecret = builder.Configuration["Authentication:ClientSecret"];
         options.ResponseType = OpenIdConnectResponseType.Code;
