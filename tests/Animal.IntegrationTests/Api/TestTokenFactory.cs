@@ -23,7 +23,9 @@ public sealed class TestTokenFactory : IDisposable
         string scopeClaimType = "scope",
         RSA? signingKey = null,
         IEnumerable<Claim>? extraClaims = null,
-        IEnumerable<string>? roles = null)
+        IEnumerable<string>? roles = null,
+        string? tokenId = null,
+        DateTimeOffset? issuedAt = null)
     {
         var claims = new List<Claim>(extraClaims ?? []);
         if (subject is not null)
@@ -35,6 +37,9 @@ public sealed class TestTokenFactory : IDisposable
         {
             claims.Add(new Claim(scopeClaimType, string.Join(' ', scopes)));
         }
+
+        // A unique token id, like every real access token. Two sign-ins never share one.
+        claims.Add(new Claim("jti", tokenId ?? Guid.NewGuid().ToString("N")));
 
         // One claim per role, like Keycloak's flat "roles" array.
         foreach (var role in roles ?? [])
@@ -53,6 +58,7 @@ public sealed class TestTokenFactory : IDisposable
             Audience = audience ?? Audience,
             Subject = new ClaimsIdentity(claims),
             Expires = expiration,
+            IssuedAt = (issuedAt ?? DateTimeOffset.UtcNow).UtcDateTime,
             NotBefore = notBefore,
             SigningCredentials = new SigningCredentials(
                 new RsaSecurityKey(key),

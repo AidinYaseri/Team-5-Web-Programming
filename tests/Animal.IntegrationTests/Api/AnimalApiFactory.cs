@@ -66,6 +66,23 @@ namespace Animal.IntegrationTests.Api
             return CreateAuthenticatedClient("test-subject", ["pets.write"], StaffRoles);
         }
 
+        // One "device" signing in on its own: a fresh token (its own jti and issue time) for the given user.
+        // Used by the cross-device tests, which must never copy one device's token to another.
+        public DeviceSession SignInDevice(string subject, IEnumerable<string> scopes, TimeSpan issuedAgo = default)
+        {
+            var tokenId = Guid.NewGuid().ToString("N");
+            var token = _tokenFactory.CreateToken(subject: subject, scopes: scopes, tokenId: tokenId,
+                issuedAt: DateTimeOffset.UtcNow - issuedAgo);
+            var client = CreateClient();
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            return new DeviceSession(client, token, tokenId);
+        }
+
+        public sealed record DeviceSession(HttpClient Client, string Token, string TokenId) : IDisposable
+        {
+            public void Dispose() => Client.Dispose();
+        }
+
         // Staff operations (pets.write, shelters.write, adoptions.review) need this role as well as the scope.
         public static readonly string[] StaffRoles = ["staff"];
 
