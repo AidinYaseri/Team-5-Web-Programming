@@ -22,7 +22,7 @@ var authentication = builder.Services.AddAuthentication(options =>
     }
 }).AddCookie(options =>
 {
-    // The cookie holds the tokens (SaveTokens = true), encrypted with Data Protection and never readable by scripts.
+    // The cookie only holds a session key; the session and its tokens (SaveTokens = true) stay on the server.
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
@@ -61,6 +61,11 @@ if (identityConfigured)
 }
 
 builder.Services.AddAuthorization();
+// Sessions live on the server; the cookie only carries the session key (see InMemoryTicketStore).
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ITicketStore, InMemoryTicketStore>();
+builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
+    .Configure<ITicketStore>((options, store) => options.SessionStore = store);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AccessTokenProvider>();
