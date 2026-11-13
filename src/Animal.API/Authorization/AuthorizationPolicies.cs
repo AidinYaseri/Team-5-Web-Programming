@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace Animal.API.Authorization
 {
     // One named policy per scope in docs/milestone-3/api-contracts.md. The policy name is the scope string.
+    // Staff operations also need the staff role (docs/milestone-4/api-contracts.md, Authorization).
     public static class AuthorizationPolicies
     {
         public const string PetsWrite = "pets.write";
@@ -31,6 +32,10 @@ namespace Animal.API.Authorization
         private static readonly HashSet<string> NeedsLocalUser =
             [AdoptionsRead, AdoptionsWrite, AppointmentsRead, AppointmentsWrite, NotificationsRead];
 
+        // Staff operations. The identity provider gives any optional scope to anyone who asks for it, so the scope alone
+        // doesn't prove the caller is staff. These also need the staff role from the token (decision D3).
+        private static readonly HashSet<string> NeedsStaffRole = [PetsWrite, SheltersWrite, AdoptionsReview];
+
         public static void Configure(AuthorizationOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
@@ -51,13 +56,18 @@ namespace Animal.API.Authorization
                     {
                         policy.RequireAssertion(context => ScopeClaims.HasMappedUser(context.User));
                     }
+
+                    if (NeedsStaffRole.Contains(scope))
+                    {
+                        policy.RequireAssertion(context => ScopeClaims.HasRole(context.User, ScopeClaims.StaffRole));
+                    }
                 });
             }
 
             options.AddPolicy(AdoptionsReadOrReview, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireAssertion(context =>
-                    ScopeClaims.HasScope(context.User, AdoptionsReview)
+                    (ScopeClaims.HasScope(context.User, AdoptionsReview) && ScopeClaims.HasRole(context.User, ScopeClaims.StaffRole))
                     || (ScopeClaims.HasScope(context.User, AdoptionsRead) && ScopeClaims.HasMappedUser(context.User))));
         }
     }

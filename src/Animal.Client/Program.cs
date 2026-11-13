@@ -20,7 +20,21 @@ var authentication = builder.Services.AddAuthentication(options =>
     {
         options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
     }
-}).AddCookie();
+}).AddCookie(options =>
+{
+    // The cookie only holds a session key; the session and its tokens (SaveTokens = true) stay on the server.
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+        ? CookieSecurePolicy.SameAsRequest
+        : CookieSecurePolicy.Always;
+    // No sliding: the session can't outlive the access token it carries (decision D5). Signing in again is
+    // silent while the Keycloak session is still active.
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = false;
+    options.Events.OnValidatePrincipal = context => AuthCookieEvents.RejectIfAccessTokenExpired(
+        context, context.HttpContext.RequestServices.GetRequiredService<TimeProvider>());
+});
 
 if (identityConfigured)
 {
@@ -28,6 +42,8 @@ if (identityConfigured)
     {
         options.Authority = authority;
         options.ClientId = clientId;
+        // The local Keycloak runs on plain http, which is only allowed in Development (same rule as the API).
+        options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
         // Keep this value in user-secrets or an environment variable; it is only used server-side.
         options.ClientSecret = builder.Configuration["Authentication:ClientSecret"];
         options.ResponseType = OpenIdConnectResponseType.Code;
@@ -45,6 +61,13 @@ if (identityConfigured)
 }
 
 builder.Services.AddAuthorization();
+// Sessions live on the server; the cookie only carries the session key (see InMemoryTicketStore).
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<ITicketStore, InMemoryTicketStore>();
+builder.Services.AddOptions<CookieAuthenticationOptions>(CookieAuthenticationDefaults.AuthenticationScheme)
+    .Configure<ITicketStore>((options, store) => options.SessionStore = store);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AccessTokenProvider>();
 builder.Services.AddScoped<NotificationCountState>();
 builder.Services.AddTransient<AccessTokenHandler>();
@@ -104,20 +127,6 @@ app.MapPost("/auth/logout", async (HttpContext context) =>
     {
         context.Response.Redirect("/");
     }
-}).AllowAnonymous();
-
-// The access token is returned only to the same-origin signed-in browser session. No client secret is sent here.
-app.MapGet("/auth/access-token", async (HttpContext context) =>
-{
-    context.Response.Headers.CacheControl = "no-store, no-cache";
-    context.Response.Headers.Pragma = "no-cache";
-    if (context.User.Identity?.IsAuthenticated != true)
-    {
-        return Results.Unauthorized();
-    }
-
-    var token = await context.GetTokenAsync("access_token");
-    return token is null ? Results.Unauthorized() : Results.Ok(new { accessToken = token });
 }).AllowAnonymous();
 
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();

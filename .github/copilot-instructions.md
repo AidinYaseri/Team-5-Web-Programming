@@ -86,7 +86,7 @@ dotnet ef migrations script --idempotent --configuration Release --project src/A
 - Unit tests go in `tests/Animal.UnitTests` (domain rules, application services with fakes, client API classes, architecture rules). Integration tests go in `tests/Animal.IntegrationTests`: endpoints through `AnimalApiFactory` (real `Program.cs`, SQLite in memory) and repositories through `SqliteTestDatabase`. Follow `.github/skills/testing/SKILL.md`.
 - Protected endpoints are tested with real signed tokens from `AnimalApiFactory.CreateToken(subject:, scopes:)` or `CreateAuthenticatedClient(...)`. Never add a fake authentication handler.
 - New services and controller logic must ship with tests.
-- The CI workflow (`.github/workflows/Ci.yml`) runs on pushes to `main` and on PRs into `main` or `feature/milestone-3-layered-service-development`, and must pass. The .NET version in CI must match `<TargetFramework>` in the `.csproj` files.
+- The CI workflow (`.github/workflows/Ci.yml`) runs on pushes to `main` and on PRs into `main` or a milestone branch (`feature/milestone-3-layered-service-development`, `feature/milestone-4-security`), and must pass. The .NET version in CI must match `<TargetFramework>` in the `.csproj` files.
 - Use `src/Animal.API/Animal.API.http` for manual endpoint checks.
 
 ## 5. Security
@@ -110,7 +110,7 @@ Before considering a change done:
 5. No secrets, PII or real data in code, config, logs, seed data or tests.
 6. Endpoints have validation, correct status codes and appropriate authorization.
 7. Diagrams and README are updated if services, models or structure changed.
-8. Work is on a branch off `feature/milestone-3-layered-service-development` and goes through a pull request into it. CI is green and at least one teammate has reviewed it before merging.
+8. Work is on a branch off the current milestone branch (`feature/milestone-4-security`) and goes through a pull request into it. CI is green and at least one teammate has reviewed it before merging.
 9. The diff contains only the intended changes (no `bin/`, `obj/`, `.vs/` or `*.user` files).
 
 ## 7. AI workflow (GitHub Copilot + MCP)

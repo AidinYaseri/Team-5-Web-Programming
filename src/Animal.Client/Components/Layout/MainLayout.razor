@@ -1,7 +1,6 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AccessTokenProvider AccessTokenProvider
 @inject NotificationsApiClient NotificationsApi
 @inject NotificationCountState NotificationCountState
 
@@ -61,7 +60,6 @@
 
         try
         {
-            await AccessTokenProvider.RefreshAsync();
             NotificationCountState.SetUnreadCount((await NotificationsApi.GetAsync(unreadOnly: true)).Count);
             StateHasChanged();
         }

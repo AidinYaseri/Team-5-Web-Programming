@@ -79,7 +79,7 @@ namespace Animal.IntegrationTests.Api
             {
                 Content = JsonContent.Create(request)
             };
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"]));
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"], roles: AnimalApiFactory.StaffRoles));
 
             using var response = await _client.SendAsync(message);
 
@@ -97,7 +97,7 @@ namespace Animal.IntegrationTests.Api
             {
                 Content = JsonContent.Create(ValidShelter())
             };
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"]));
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"], roles: AnimalApiFactory.StaffRoles));
 
             using var response = await _client.SendAsync(message);
 
@@ -108,7 +108,7 @@ namespace Animal.IntegrationTests.Api
         public async Task DeleteShelter_WithPets_Returns409()
         {
             using var message = new HttpRequestMessage(HttpMethod.Delete, "/api/shelters/1");
-            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"]));
+            message.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _factory.CreateToken(scopes: ["shelters.write"], roles: AnimalApiFactory.StaffRoles));
 
             using var response = await _client.SendAsync(message);
 

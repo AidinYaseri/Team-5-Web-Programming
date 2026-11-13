@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <!-- Holds Authentication:ClientSecret locally (dotnet user-secrets). Never put the secret in appsettings. -->
+    <UserSecretsId>animal-client-6f1c2b7e-team5</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

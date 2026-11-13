@@ -50,17 +50,23 @@ API client attaches the access token through `AccessTokenHandler`:
 8. `Animal.API`'s JWT bearer handler validates the token before authorization
    policies evaluate the request.
 
-The identity provider and final provider-specific client settings are not
-chosen yet, so sign-in stays off until `Authentication:Authority` and
-`Authentication:ClientId` are set for `Animal.Client`. The client secret is read
-from configuration on the server only (user-secrets locally) and is never sent to
-the browser. No provider credentials or client secrets are included in this
+Since Milestone 4 the identity provider is a local Keycloak (setup:
+`docs/milestone-4/identity-provider-setup.md`). The client secret is read from
+configuration on the server only (user-secrets locally) and is never sent to the
+browser. No provider credentials or client secrets are included in this
 repository.
 
-Known follow-up: the browser fetches the access token from the client's own
-`/auth/access-token` endpoint (`wwwroot/auth.js`) before `AccessTokenHandler` uses
-it, so the token is readable by page JavaScript. Keeping it server-side only
-(Blazor Server can read the saved token during the request) would reduce exposure.
+The access token stays on the server (WI-3 and WI-10, decision D4). The OIDC
+handler saves the tokens in the signed-in session, which is kept on the server
+(`InMemoryTicketStore`). The `HttpOnly` auth cookie only holds a random session
+key. `AccessTokenProvider` reads the token on the server for each API call
+(`AccessTokenHandler`). The old `/auth/access-token` endpoint and
+`wwwroot/auth.js` were removed, so page JavaScript can't read the token. A
+session lasts 30 minutes, doesn't slide, and is rejected as soon as its access
+token has expired (`AuthCookieEvents`). Sign-out (`POST /auth/logout`,
+antiforgery-checked) deletes the session on the server, clears the cookie and
+ends the Keycloak session for that device only, so a cookie copied before
+sign-out stops working.
 
 ## API token validation
 
@@ -136,9 +142,9 @@ Every controller action has an explicit attribute; anything else falls back to "
 | Method | Endpoint | Authorization |
 |---|---|---|
 | `GET` | `/api/pets`, `/api/pets/{id}` | Public: `[AllowAnonymous]` |
-| `POST`, `PUT`, `DELETE` | `/api/pets`, `/api/pets/{id}` | `pets.write` |
+| `POST`, `PUT`, `DELETE` | `/api/pets`, `/api/pets/{id}` | `pets.write` + role `staff` |
 | `GET` | `/api/shelters`, `/api/shelters/{id}`, `/api/shelters/{id}/pets` | Public: `[AllowAnonymous]` |
-| `POST`, `PUT`, `DELETE` | `/api/shelters`, `/api/shelters/{id}` | `shelters.write` |
+| `POST`, `PUT`, `DELETE` | `/api/shelters`, `/api/shelters/{id}` | `shelters.write` + role `staff` |
 | `GET` | `/api/users/me` | `users.read` |
 | `PUT` | `/api/users/me` | `users.write` |
 | `GET` | `/api/appointments` | `appointments.read` + mapped local user |
@@ -147,13 +153,16 @@ Every controller action has an explicit attribute; anything else falls back to "
 | `POST` | `/api/notifications/{id}/read` | `notifications.read` + mapped local user |
 | `POST` | `/api/adoptions` | `adoptions.write` + mapped local user |
 | `GET` | `/api/adoptions/mine` | `adoptions.read` + mapped local user |
-| `GET` | `/api/adoptions/{id}` | `adoptions.read-or-review`: `adoptions.review` (any application), or `adoptions.read` + mapped user (own only; others read as 404) |
-| `GET` | `/api/adoptions?status=` | `adoptions.review` |
-| `POST` | `/api/adoptions/{id}/approve`, `/api/adoptions/{id}/reject` | `adoptions.review` |
+| `GET` | `/api/adoptions/{id}` | `adoptions.read-or-review`: `adoptions.review` + role `staff` (any application), or `adoptions.read` + mapped user (own only; others read as 404) |
+| `GET` | `/api/adoptions?status=` | `adoptions.review` + role `staff` |
+| `POST` | `/api/adoptions/{id}/approve`, `/api/adoptions/{id}/reject` | `adoptions.review` + role `staff` |
 | `GET` | `/openapi/v1.json` (Development only) | Public: `AllowAnonymous()` |
 
-The client requests `adoptions.review` along with the other scopes so the review page can work for staff. The identity
-provider must only grant it to shelter staff; the API checks it on every reviewer endpoint.
+The client requests `adoptions.review` along with the other scopes so the review page can work for staff. Keycloak (like
+most providers) gives an optional scope to anyone who asks for it, so a scope alone doesn't prove the caller is staff.
+Since Milestone 4 (WI-2, decision D3 in `docs/milestone-4/decisions.md`), `pets.write`, `shelters.write` and
+`adoptions.review` also need the realm role `staff`, read from the flat `roles` claim of the validated access token.
+A signed-in user with the scope but without the role gets 403. `AuthTests.StaffOperation_*` covers this.
 
 ## Current-user identity
 
