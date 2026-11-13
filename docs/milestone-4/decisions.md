@@ -73,6 +73,8 @@ The role comes from the token the API validated, never from the client. WI-2 add
 
 **Choice:** remove the route and `auth.js`. The tokens stay in the encrypted auth cookie (`SaveTokens = true`), and `AccessTokenHandler` reads them on the server with `HttpContext.GetTokenAsync("access_token")`. Blazor Server runs on the server, so it doesn't need the token in the browser. WI-3 adds a test that `/auth/access-token` returns 404.
 
+**Changed in WI-10:** the session is now kept on the server too (`InMemoryTicketStore`, the cookie's `SessionStore`). The cookie only holds a random session key. **Why:** with the whole session in the cookie, signing out only made the browser delete it, so a cookie copied before sign-out kept working until it expired. A test showed this (`SignOut_CopiedCookieFromBeforeSignOut_NoLongerWorks`). Now sign-out deletes the session on the server and any copy stops working. The tokens also never go to the browser at all, not even encrypted. **Cost:** sessions live in the client's memory, so restarting the client signs everyone out, and running several client servers would need a shared cache (for example Redis) instead.
+
 ## D5: Sign-out
 
 **Choice:** keep the existing `POST /auth/logout`. It signs out of the cookie and of Keycloak (`end_session` with the id token), then returns to `/`. Signing out only ends that device's session. Other devices keep their own session until they sign out or it expires.
