@@ -56,14 +56,17 @@ configuration on the server only (user-secrets locally) and is never sent to the
 browser. No provider credentials or client secrets are included in this
 repository.
 
-The access token stays on the server (WI-3, decision D4). The OIDC handler saves
-it in the encrypted, `HttpOnly` auth cookie, and `AccessTokenProvider` reads it
-there on the server for each API call (`AccessTokenHandler`). The old
-`/auth/access-token` endpoint and `wwwroot/auth.js` were removed, so page
-JavaScript can't read the token. The cookie lasts 30 minutes, doesn't slide, and
-is rejected as soon as the access token inside it has expired
-(`AuthCookieEvents`). Sign-out (`POST /auth/logout`, antiforgery-checked) clears
-the cookie and ends the Keycloak session for that device only.
+The access token stays on the server (WI-3 and WI-10, decision D4). The OIDC
+handler saves the tokens in the signed-in session, which is kept on the server
+(`InMemoryTicketStore`). The `HttpOnly` auth cookie only holds a random session
+key. `AccessTokenProvider` reads the token on the server for each API call
+(`AccessTokenHandler`). The old `/auth/access-token` endpoint and
+`wwwroot/auth.js` were removed, so page JavaScript can't read the token. A
+session lasts 30 minutes, doesn't slide, and is rejected as soon as its access
+token has expired (`AuthCookieEvents`). Sign-out (`POST /auth/logout`,
+antiforgery-checked) deletes the session on the server, clears the cookie and
+ends the Keycloak session for that device only, so a cookie copied before
+sign-out stops working.
 
 ## API token validation
 

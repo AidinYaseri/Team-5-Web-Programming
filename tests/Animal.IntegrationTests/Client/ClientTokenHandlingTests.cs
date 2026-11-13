@@ -57,6 +57,8 @@ namespace Animal.IntegrationTests.Client
             Assert.False(options.SlidingExpiration);
             Assert.Equal(TimeSpan.FromMinutes(30), options.ExpireTimeSpan);
             Assert.NotNull(options.Events.OnValidatePrincipal);
+            // Sessions are kept on the server, so sign-out can end them (see ClientSignOutTests).
+            Assert.IsType<ClientApp::Animal.Client.Services.InMemoryTicketStore>(options.SessionStore);
         }
 
         [Fact]
