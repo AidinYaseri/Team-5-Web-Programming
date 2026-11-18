@@ -24,8 +24,7 @@ namespace Animal.Data.Repositories
             ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
             ArgumentNullException.ThrowIfNull(bytes);
 
-            var existing = await _context.ProfilePictures
-                .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+            var existing = await _context.ProfilePictures.FindAsync([userId], cancellationToken);
 
             if (existing is null)
             {
@@ -47,8 +46,7 @@ namespace Animal.Data.Repositories
 
         public async Task DeleteAsync(int userId, CancellationToken cancellationToken = default)
         {
-            var existing = await _context.ProfilePictures
-                .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
+            var existing = await _context.ProfilePictures.FindAsync([userId], cancellationToken);
 
             if (existing is null)
             {
