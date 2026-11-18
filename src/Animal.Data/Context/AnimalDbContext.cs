@@ -13,6 +13,7 @@ namespace Animal.Data.Context
         public DbSet<Shelter> Shelters => Set<Shelter>();
         public DbSet<Pet> Pets => Set<Pet>();
         public DbSet<User> Users => Set<User>();
+        public DbSet<ProfilePicture> ProfilePictures => Set<ProfilePicture>();
         public DbSet<AdoptionApplication> AdoptionApplications => Set<AdoptionApplication>();
         public DbSet<Appointment> Appointments => Set<Appointment>();
         public DbSet<Notification> Notifications => Set<Notification>();

@@ -17,6 +17,7 @@ namespace Animal.Data
             services.AddScoped<IPetRepository, PetRepository>();
             services.AddScoped<IShelterRepository, ShelterRepository>();
             services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IProfilePictureStore, ProfilePictureStore>();
             services.AddScoped<INotificationRepository, NotificationRepository>();
             services.AddScoped<IAppointmentRepository, AppointmentRepository>();
             services.AddScoped<IAdoptionRepository, AdoptionRepository>();
