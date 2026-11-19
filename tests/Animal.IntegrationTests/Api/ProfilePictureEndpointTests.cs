@@ -97,13 +97,15 @@ namespace Animal.IntegrationTests.Api
         public async Task UploadMyProfilePicture_InvalidFormat_ReturnsBadRequest()
         {
             var identity = NewIdentity();
-            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.write"]);
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
             await client.PutAsJsonAsync("/api/users/me", new UpdateUserRequest
             {
                 Name = "Picture User",
                 Email = identity.Email,
                 PhoneNumber = "555-0100"
             });
+            Assert.Equal(HttpStatusCode.NoContent,
+                (await client.PutAsync("/api/users/me/picture", CreateUpload())).StatusCode);
 
             using var content = new MultipartFormDataContent();
             using var invalid = new ByteArrayContent([1, 2, 3, 4]);
@@ -113,6 +115,8 @@ namespace Animal.IntegrationTests.Api
             using var response = await client.PutAsync("/api/users/me/picture", content);
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            using var savedPicture = await client.GetAsync("/api/users/me/picture");
+            Assert.Equal(PngBytes, await savedPicture.Content.ReadAsByteArrayAsync());
         }
 
         private static MultipartFormDataContent CreateUpload()

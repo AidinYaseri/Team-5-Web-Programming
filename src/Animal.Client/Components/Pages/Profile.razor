@@ -57,6 +57,11 @@ else
             </ul>
         }
 
+        @if (_profileNotice is not null)
+        {
+            <p class="success" role="status">@_profileNotice</p>
+        }
+
         <div class="form-actions">
             <button type="submit" disabled="@_saving">@(_saving ? "Saving..." : "Save")</button>
         </div>
@@ -79,15 +84,44 @@ else
         {
             <p class="error" role="alert">@_pictureError</p>
         }
+
+        @if (_pictureNotice is not null)
+        {
+            <p class="success" role="status">@_pictureNotice</p>
+        }
+
+        @if (!_hasSavedProfile)
+        {
+            <p>Save your profile details before adding a picture.</p>
+        }
+
+        <label>
+            Upload a PNG or JPEG (maximum 2 MB)
+            <InputFile OnChange="UploadPictureAsync"
+                       accept="image/png,image/jpeg"
+                       disabled="@(!_hasSavedProfile || _pictureBusy)" />
+        </label>
+
+        @if (_pictureDataUrl is not null)
+        {
+            <button type="button" class="danger" @onclick="RemovePictureAsync" disabled="@_pictureBusy">
+                @(_pictureBusy ? "Please wait..." : "Remove picture")
+            </button>
+        }
     </section>
 }
 
 @code {
+    private const long MaxPictureBytes = 2 * 1024 * 1024;
     private UpdateUserRequest? _model;
     private string? _pictureDataUrl;
     private string? _pictureError;
+    private string? _pictureNotice;
+    private string? _profileNotice;
     private bool _unauthorized;
     private bool _saving;
+    private bool _hasSavedProfile;
+    private bool _pictureBusy;
     private List<string> _errors = [];
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -100,6 +134,7 @@ else
         try
         {
             var profile = await Api.GetMyProfileAsync();
+            _hasSavedProfile = profile is not null;
             _model = profile is null
                 ? new UpdateUserRequest()
                 : UpdateUserRequest.FromResponse(profile);
@@ -136,11 +171,14 @@ else
     private async Task SaveAsync()
     {
         _errors = [];
+        _profileNotice = null;
         _saving = true;
 
         try
         {
             await Api.UpdateMyProfileAsync(_model!);
+            _hasSavedProfile = true;
+            _profileNotice = "Profile saved.";
         }
         catch (ApiException ex)
         {
@@ -153,6 +191,84 @@ else
         finally
         {
             _saving = false;
+        }
+    }
+
+    private async Task UploadPictureAsync(InputFileChangeEventArgs args)
+    {
+        _pictureError = null;
+        _pictureNotice = null;
+
+        var file = args.File;
+        if (file.Size > MaxPictureBytes)
+        {
+            _pictureError = "Choose a picture that is no larger than 2 MB.";
+            return;
+        }
+
+        if (file.ContentType is not ("image/png" or "image/jpeg"))
+        {
+            _pictureError = "Choose a PNG or JPEG image.";
+            return;
+        }
+
+        _pictureBusy = true;
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxPictureBytes);
+            await Api.UploadMyProfilePictureAsync(stream, file.Name, file.ContentType);
+
+            var savedPicture = await Api.GetMyProfilePictureAsync();
+            if (savedPicture is null)
+            {
+                _pictureError = "The API did not return the uploaded picture. Your previous picture is unchanged.";
+                return;
+            }
+
+            _pictureDataUrl = ToDataUrl(savedPicture);
+            _pictureNotice = "Profile picture uploaded.";
+        }
+        catch (ApiException ex)
+        {
+            _pictureError = PictureErrorMessage(ex);
+        }
+        catch (HttpRequestException)
+        {
+            _pictureError = "Can't reach the API to upload your profile picture.";
+        }
+        catch (IOException)
+        {
+            _pictureError = "Choose a picture that is no larger than 2 MB.";
+        }
+        finally
+        {
+            _pictureBusy = false;
+        }
+    }
+
+    private async Task RemovePictureAsync()
+    {
+        _pictureError = null;
+        _pictureNotice = null;
+        _pictureBusy = true;
+
+        try
+        {
+            await Api.DeleteMyProfilePictureAsync();
+            _pictureDataUrl = null;
+            _pictureNotice = "Profile picture removed.";
+        }
+        catch (ApiException ex)
+        {
+            _pictureError = PictureErrorMessage(ex);
+        }
+        catch (HttpRequestException)
+        {
+            _pictureError = "Can't reach the API to remove your profile picture.";
+        }
+        finally
+        {
+            _pictureBusy = false;
         }
     }
 
@@ -183,7 +299,7 @@ else
         System.Net.HttpStatusCode.BadRequest => exception.Errors.FirstOrDefault()
             ?? "The profile picture is invalid. Choose a PNG or JPEG under 2 MB.",
         System.Net.HttpStatusCode.Unauthorized => "Please sign in again to view your profile picture.",
-        System.Net.HttpStatusCode.NotFound => "Your profile picture could not be found.",
+        System.Net.HttpStatusCode.NotFound => "Your profile could not be found. Save your profile details before changing its picture.",
         _ => exception.Message
     };
 }
