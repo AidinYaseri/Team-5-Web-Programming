@@ -211,6 +211,28 @@ namespace Animal.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Animal.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("Bytes")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("ProfilePictures", (string)null);
+                });
+
             modelBuilder.Entity("Animal.Domain.Entities.Shelter", b =>
                 {
                     b.Property<int>("Id")
@@ -352,6 +374,15 @@ namespace Animal.Data.Migrations
                         .WithMany()
                         .HasForeignKey("ShelterId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Animal.Domain.Entities.ProfilePicture", b =>
+                {
+                    b.HasOne("Animal.Domain.Entities.User", null)
+                        .WithOne()
+                        .HasForeignKey("Animal.Domain.Entities.ProfilePicture", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 #pragma warning restore 612, 618
