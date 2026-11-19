@@ -61,22 +61,65 @@ else
             <button type="submit" disabled="@_saving">@(_saving ? "Saving..." : "Save")</button>
         </div>
     </EditForm>
+
+    <section class="profile-picture-editor" aria-labelledby="profile-picture-heading">
+        <h2 id="profile-picture-heading">Profile picture</h2>
+        @if (_pictureDataUrl is null)
+        {
+            <div class="profile-picture-placeholder" role="img" aria-label="No profile picture">
+                No profile picture
+            </div>
+        }
+        else
+        {
+            <img class="profile-picture" src="@_pictureDataUrl" alt="Your profile picture" />
+        }
+
+        @if (_pictureError is not null)
+        {
+            <p class="error" role="alert">@_pictureError</p>
+        }
+    </section>
 }
 
 @code {
     private UpdateUserRequest? _model;
+    private string? _pictureDataUrl;
+    private string? _pictureError;
     private bool _unauthorized;
     private bool _saving;
     private List<string> _errors = [];
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender)
+        {
+            return;
+        }
+
         try
         {
             var profile = await Api.GetMyProfileAsync();
             _model = profile is null
                 ? new UpdateUserRequest()
                 : UpdateUserRequest.FromResponse(profile);
+
+            if (profile is not null)
+            {
+                try
+                {
+                    var picture = await Api.GetMyProfilePictureAsync();
+                    _pictureDataUrl = picture is null ? null : ToDataUrl(picture);
+                }
+                catch (ApiException ex)
+                {
+                    _pictureError = PictureErrorMessage(ex);
+                }
+                catch (HttpRequestException)
+                {
+                    _pictureError = "Can't reach the API to load your profile picture.";
+                }
+            }
         }
         catch (ApiException ex)
         {
@@ -86,6 +129,8 @@ else
         {
             _errors = ["Can't reach the API. Is Animal.API running?"];
         }
+
+        StateHasChanged();
     }
 
     private async Task SaveAsync()
@@ -129,4 +174,16 @@ else
                 _ => exception.Message
             })];
     }
+
+    private static string ToDataUrl(ProfilePictureImage picture) =>
+        $"data:{picture.ContentType};base64,{Convert.ToBase64String(picture.Bytes)}";
+
+    private static string PictureErrorMessage(ApiException exception) => exception.StatusCode switch
+    {
+        System.Net.HttpStatusCode.BadRequest => exception.Errors.FirstOrDefault()
+            ?? "The profile picture is invalid. Choose a PNG or JPEG under 2 MB.",
+        System.Net.HttpStatusCode.Unauthorized => "Please sign in again to view your profile picture.",
+        System.Net.HttpStatusCode.NotFound => "Your profile picture could not be found.",
+        _ => exception.Message
+    };
 }
