@@ -10,6 +10,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
     <PackageReference Include="SkiaSharp" Version="2.88.9" />
+    <!-- SkiaSharp ships the Windows/macOS native library; Linux (CI on Ubuntu, containers) needs this one too. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="2.88.9" />
   </ItemGroup>
 
   <ItemGroup>
