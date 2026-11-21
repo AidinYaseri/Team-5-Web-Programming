@@ -3,15 +3,14 @@ using Animal.Data.Repositories;
 using Animal.Domain.Entities;
 using Animal.Domain.Exceptions;
 using Animal.Domain.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
+using SkiaSharp;
 
 namespace Animal.API.Services
 {
     public class UserService : IUserService
     {
+        private const int MaxProfilePictureDimension = 2048;
+
         private readonly IUserRepository _users;
         private readonly IProfilePictureStore _profilePictures;
         private readonly IUnitOfWork _unitOfWork;
@@ -28,7 +27,7 @@ namespace Animal.API.Services
             CancellationToken cancellationToken = default)
         {
             var user = await GetRequiredUserAsync(subject, cancellationToken);
-            var hasPicture = await _profilePictures.GetAsync(user.Id, cancellationToken) is not null;
+            var hasPicture = await _profilePictures.ExistsAsync(user.Id, cancellationToken);
 
             return UserResponse.FromUser(user, hasPicture);
         }
@@ -41,6 +40,8 @@ namespace Animal.API.Services
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
             ArgumentNullException.ThrowIfNull(bytes);
+
+            ProfilePictureRules.EnsureValid(contentType, bytes);
 
             var user = await GetRequiredUserAsync(subject, cancellationToken);
             var normalized = await NormalizeProfilePictureAsync(bytes, cancellationToken);
@@ -78,29 +79,47 @@ namespace Animal.API.Services
                 ?? throw new EntityNotFoundException(nameof(User), "You don't have a profile yet.");
         }
 
-        private static async Task<(string ContentType, byte[] Bytes)> NormalizeProfilePictureAsync(byte[] bytes, CancellationToken cancellationToken)
+        private static Task<(string ContentType, byte[] Bytes)> NormalizeProfilePictureAsync(byte[] bytes, CancellationToken cancellationToken)
         {
             try
             {
-                using var input = new MemoryStream(bytes, writable: false);
-                using var image = await Image.LoadAsync(input, cancellationToken);
-                using var output = new MemoryStream();
-                var decodedFormat = image.Metadata.DecodedImageFormat;
+                cancellationToken.ThrowIfCancellationRequested();
 
-                if (string.Equals(decodedFormat?.DefaultMimeType, "image/jpeg", StringComparison.OrdinalIgnoreCase))
+                var sourceContentType = ProfilePictureRules.DetectContentType(bytes)
+                    ?? throw new DomainValidationException("The uploaded profile picture is not a valid image.");
+
+                using var infoStream = new MemoryStream(bytes, writable: false);
+                using var codec = SKCodec.Create(infoStream)
+                    ?? throw new DomainValidationException("The uploaded profile picture is not a valid image.");
+                var info = codec.Info;
+
+                if (info.Width > MaxProfilePictureDimension || info.Height > MaxProfilePictureDimension)
                 {
-                    await image.SaveAsync(output, new JpegEncoder { Quality = 90 }, cancellationToken);
-                    return ("image/jpeg", output.ToArray());
+                    throw new DomainValidationException($"Profile picture dimensions can't exceed {MaxProfilePictureDimension}x{MaxProfilePictureDimension} pixels.");
                 }
 
-                await image.SaveAsync(output, new PngEncoder(), cancellationToken);
-                return ("image/png", output.ToArray());
+                cancellationToken.ThrowIfCancellationRequested();
+
+                using var input = new MemoryStream(bytes, writable: false);
+                using var bitmap = SKBitmap.Decode(input)
+                    ?? throw new DomainValidationException("The uploaded profile picture is not a valid image.");
+                using var image = SKImage.FromBitmap(bitmap);
+                using var encoded = string.Equals(sourceContentType, "image/jpeg", StringComparison.OrdinalIgnoreCase)
+                    ? image.Encode(SKEncodedImageFormat.Jpeg, 90)
+                    : image.Encode(SKEncodedImageFormat.Png, 100);
+
+                if (encoded is null)
+                {
+                    throw new DomainValidationException("The uploaded profile picture is not a valid image.");
+                }
+
+                return Task.FromResult((sourceContentType, encoded.ToArray()));
             }
-            catch (UnknownImageFormatException)
+            catch (ArgumentException)
             {
                 throw new DomainValidationException("The uploaded profile picture is not a valid image.");
             }
-            catch (InvalidImageContentException)
+            catch (NotSupportedException)
             {
                 throw new DomainValidationException("The uploaded profile picture is not a valid image.");
             }

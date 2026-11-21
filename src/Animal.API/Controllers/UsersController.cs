@@ -2,6 +2,7 @@ using Animal.API.Authorization;
 using Animal.API.Contracts;
 using Animal.API.Services;
 using Animal.Domain.Exceptions;
+using Animal.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,7 @@ namespace Animal.API.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
-        private const int ProfilePictureRequestSizeLimitBytes = 1_000_000;
+        private const int ProfilePictureRequestSizeLimitBytes = 3 * 1024 * 1024;
 
         private readonly IUserService _userService;
         private readonly ICurrentUser _currentUser;
@@ -50,15 +51,30 @@ namespace Animal.API.Controllers
 
         [HttpPut("me/picture")]
         [Authorize(Policy = AuthorizationPolicies.UsersWrite)]
-        [RequestFormLimits(MultipartBodyLengthLimit = ProfilePictureRequestSizeLimitBytes)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> SaveMyPicture([FromForm] IFormFile? file, CancellationToken cancellationToken)
         {
+            if (Request.ContentLength is > ProfilePictureRequestSizeLimitBytes)
+            {
+                return StatusCode(StatusCodes.Status413PayloadTooLarge);
+            }
+
             if (file is null || file.Length == 0)
             {
                 throw new DomainValidationException("A profile picture file is required.");
+            }
+
+            if (file.Length > ProfilePictureRequestSizeLimitBytes)
+            {
+                return StatusCode(StatusCodes.Status413PayloadTooLarge);
+            }
+
+            if (file.Length > ProfilePictureRules.MaxBytes)
+            {
+                throw new DomainValidationException($"Profile picture can't be larger than {ProfilePictureRules.MaxBytes} bytes.");
             }
 
             await using var stream = file.OpenReadStream();

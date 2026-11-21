@@ -139,6 +139,11 @@ namespace Animal.UnitTests.Api
         {
             private readonly Dictionary<int, ProfilePicture> _items = [];
 
+            public Task<bool> ExistsAsync(int userId, CancellationToken cancellationToken = default)
+            {
+                return Task.FromResult(_items.ContainsKey(userId));
+            }
+
             public Task<ProfilePicture?> GetAsync(int userId, CancellationToken cancellationToken = default)
             {
                 _items.TryGetValue(userId, out var picture);

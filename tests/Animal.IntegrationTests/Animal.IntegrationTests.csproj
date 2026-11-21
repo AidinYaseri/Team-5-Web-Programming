@@ -30,6 +30,8 @@
   <ItemGroup>
     <None Include="TestData\profile-picture.png" CopyToOutputDirectory="PreserveNewest" />
     <None Include="TestData\profile-picture.jpg" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\profile-picture.gif" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\profile-picture-wide-3000.png" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

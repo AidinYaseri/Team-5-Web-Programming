@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
 using Animal.Data.Context;
+using Animal.Domain.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Animal.IntegrationTests.Api
@@ -255,17 +256,120 @@ namespace Animal.IntegrationTests.Api
         }
 
         [Fact]
-        public async Task PutMyPicture_TooLarge_ReturnsBadRequest()
+        public async Task PutMyPicture_Gif_ReturnsBadRequest_AndLeavesExistingPictureUnchanged()
         {
             var identity = NewIdentity();
-            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.write"]);
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
             await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
 
-            var payload = new byte[1_100_000];
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyGif(), "image/gif", "picture.gif"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_JpegDeclaredAsPng_ReturnsBadRequest_AndLeavesExistingPictureUnchanged()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/png", "picture.jpg"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_DimensionsOver2048_ReturnsBadRequest_AndLeavesExistingPictureUnchanged()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload(WidePng3000(), "image/png", "wide.png"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_Over2Mb_ReturnsBadRequest_AndLeavesExistingPictureUnchanged()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var payload = new byte[ProfilePictureRules.MaxBytes + 1];
+            payload[0] = 0x89;
+            payload[1] = 0x50;
+            payload[2] = 0x4E;
+            payload[3] = 0x47;
+            payload[4] = 0x0D;
+            payload[5] = 0x0A;
+            payload[6] = 0x1A;
+            payload[7] = 0x0A;
+
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload(payload, "image/png", "over-2mb.png"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_RequestOver3Mb_ReturnsPayloadTooLarge_AndLeavesExistingPictureUnchanged()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var payload = new byte[(3 * 1024 * 1024) + 100_000];
             payload[0] = 1;
-            var response = await client.PutAsync("/api/users/me/picture", CreateImageUpload(payload, "application/octet-stream", "large.bin"));
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload(payload, "application/octet-stream", "large.bin"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
 
-            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.Equal(HttpStatusCode.RequestEntityTooLarge, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
         }
 
         [Fact]
@@ -293,6 +397,12 @@ namespace Animal.IntegrationTests.Api
         }
 
         private static byte[] TinyPng() => ReadTestImage("profile-picture.png");
+
+        private static byte[] TinyJpeg() => ReadTestImage("profile-picture.jpg");
+
+        private static byte[] TinyGif() => ReadTestImage("profile-picture.gif");
+
+        private static byte[] WidePng3000() => ReadTestImage("profile-picture-wide-3000.png");
 
         private static byte[] ReadTestImage(string fileName)
         {
