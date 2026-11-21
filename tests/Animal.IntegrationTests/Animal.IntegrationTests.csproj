@@ -23,6 +23,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Animal.API\Animal.API.csproj" />
+    <!-- Aliased: both apps have a top-level Program class. Use ClientApp::Program for the Blazor client. -->
+    <ProjectReference Include="..\..\src\Animal.Client\Animal.Client.csproj" Aliases="ClientApp" />
     <ProjectReference Include="..\..\src\Animal.Data\Animal.Data.csproj" />
     <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
   </ItemGroup>
