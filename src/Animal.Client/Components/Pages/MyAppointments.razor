@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @inject AppointmentsApiClient Api
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AccessTokenProvider AccessTokenProvider
 
 <PageTitle>My appointments</PageTitle>
 <h1>My appointments</h1>
@@ -48,7 +47,6 @@
         _loaded = true;
         if ((await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.IsAuthenticated == true)
         {
-            await AccessTokenProvider.RefreshAsync();
             await LoadAsync();
             StateHasChanged();
         }
