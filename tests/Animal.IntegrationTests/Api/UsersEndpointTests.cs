@@ -43,6 +43,7 @@ namespace Animal.IntegrationTests.Api
             Assert.Equal(HttpStatusCode.OK, get.StatusCode);
             Assert.Equal(request.Name, profile!.Name);
             Assert.Equal(identity.Email, profile.Email);
+            Assert.False(profile.HasPicture);
         }
 
         [Fact]
@@ -129,6 +130,10 @@ namespace Animal.IntegrationTests.Api
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/users/me")).StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized,
                 (await client.PutAsJsonAsync("/api/users/me", NewRequest(NewIdentity().Email))).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.GetAsync("/api/users/me/picture")).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized,
+                (await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"))).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync("/api/users/me/picture")).StatusCode);
         }
 
         [Fact]
@@ -141,6 +146,11 @@ namespace Animal.IntegrationTests.Api
             Assert.Equal(HttpStatusCode.Forbidden, (await writeOnly.GetAsync("/api/users/me")).StatusCode);
             Assert.Equal(HttpStatusCode.Forbidden,
                 (await readOnly.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email))).StatusCode);
+
+            Assert.Equal(HttpStatusCode.Forbidden, (await writeOnly.GetAsync("/api/users/me/picture")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden,
+                (await readOnly.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"))).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await readOnly.DeleteAsync("/api/users/me/picture")).StatusCode);
         }
 
         [Fact]
@@ -163,6 +173,131 @@ namespace Animal.IntegrationTests.Api
             var response = await client.GetAsync("/api/users/me");
 
             Assert.DoesNotContain("externalId", await response.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_ValidImage_ReturnsNoContent_AndGetReturnsImageWithCacheControl()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            var put = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+            var get = await client.GetAsync("/api/users/me/picture");
+            var bytes = await get.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.NoContent, put.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, get.StatusCode);
+            Assert.NotNull(get.Headers.CacheControl);
+            Assert.True(get.Headers.CacheControl!.Private);
+            Assert.True(get.Headers.CacheControl.NoStore);
+            Assert.Equal("image/png", get.Content.Headers.ContentType?.MediaType);
+            Assert.NotEmpty(bytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_NoProfile_ReturnsNotFound()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.write"]);
+
+            var response = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetMyPicture_WhenMissing_ReturnsNotFound()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            var response = await client.GetAsync("/api/users/me/picture");
+
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task DeleteMyPicture_RemovesPicture()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var delete = await client.DeleteAsync("/api/users/me/picture");
+            var get = await client.GetAsync("/api/users/me/picture");
+
+            Assert.Equal(HttpStatusCode.NoContent, delete.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, get.StatusCode);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_CorruptImage_ReturnsBadRequest_AndLeavesExistingPictureUnchanged()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var rejected = await client.PutAsync("/api/users/me/picture", CreateImageUpload([1, 2, 3, 4, 5], "image/png", "corrupt.png"));
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(before.Content.Headers.ContentType?.MediaType, after.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_TooLarge_ReturnsBadRequest()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            var payload = new byte[1_100_000];
+            payload[0] = 1;
+            var response = await client.PutAsync("/api/users/me/picture", CreateImageUpload(payload, "application/octet-stream", "large.bin"));
+
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GetMyProfile_WhenPictureExists_ReturnsHasPictureTrue()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            var before = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+            var after = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+
+            Assert.False(before!.HasPicture);
+            Assert.True(after!.HasPicture);
+        }
+
+        private static MultipartFormDataContent CreateImageUpload(byte[] bytes, string contentType, string fileName = "picture.png")
+        {
+            var content = new MultipartFormDataContent();
+            var file = new ByteArrayContent(bytes);
+            file.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+            content.Add(file, "file", fileName);
+            return content;
+        }
+
+        private static byte[] TinyPng() => ReadTestImage("profile-picture.png");
+
+        private static byte[] ReadTestImage(string fileName)
+        {
+            var path = Path.Combine(AppContext.BaseDirectory, "TestData", fileName);
+            return File.ReadAllBytes(path);
         }
 
         private static UserIdentity NewIdentity()

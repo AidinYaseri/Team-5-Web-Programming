@@ -27,4 +27,9 @@
     <ProjectReference Include="..\..\src\Animal.Domain\Animal.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="TestData\profile-picture.png" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="TestData\profile-picture.jpg" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -13,17 +13,31 @@ namespace Animal.UnitTests.Api
         {
             var users = new FakeUserRepository();
             users.Items.Add(new User { Id = 7, ExternalId = "subject-7", Name = "Sam", Email = "sam@example.com", PhoneNumber = "555-0100" });
-            var service = new UserService(users, new FakeUnitOfWork());
+            var service = new UserService(users, new FakeProfilePictureStore(), new FakeUnitOfWork());
 
             var result = await service.GetMyProfileAsync("subject-7");
 
-            Assert.Equal(new UserResponse(7, "Sam", "sam@example.com", "555-0100"), result);
+            Assert.Equal(new UserResponse(7, "Sam", "sam@example.com", "555-0100", false), result);
+        }
+
+        [Fact]
+        public async Task GetMyProfileAsync_WhenPictureExists_ReturnsHasPictureTrue()
+        {
+            var users = new FakeUserRepository();
+            users.Items.Add(new User { Id = 7, ExternalId = "subject-7", Name = "Sam", Email = "sam@example.com", PhoneNumber = "555-0100" });
+            var pictures = new FakeProfilePictureStore();
+            await pictures.SaveAsync(7, "image/png", [1, 2, 3]);
+            var service = new UserService(users, pictures, new FakeUnitOfWork());
+
+            var result = await service.GetMyProfileAsync("subject-7");
+
+            Assert.True(result.HasPicture);
         }
 
         [Fact]
         public async Task GetMyProfileAsync_MissingUser_ThrowsNotFound()
         {
-            var service = new UserService(new FakeUserRepository(), new FakeUnitOfWork());
+            var service = new UserService(new FakeUserRepository(), new FakeProfilePictureStore(), new FakeUnitOfWork());
 
             await Assert.ThrowsAsync<EntityNotFoundException>(() => service.GetMyProfileAsync("missing"));
         }
@@ -33,7 +47,7 @@ namespace Animal.UnitTests.Api
         {
             var users = new FakeUserRepository();
             var unitOfWork = new FakeUnitOfWork();
-            var service = new UserService(users, unitOfWork);
+            var service = new UserService(users, new FakeProfilePictureStore(), unitOfWork);
 
             await service.CreateOrUpdateMyProfileAsync(
                 "subject-new",
@@ -53,7 +67,7 @@ namespace Animal.UnitTests.Api
             var users = new FakeUserRepository();
             users.Items.Add(new User { Id = 3, ExternalId = "subject-existing", Name = "Old", Email = "old@example.com", PhoneNumber = "555-0100" });
             var unitOfWork = new FakeUnitOfWork();
-            var service = new UserService(users, unitOfWork);
+            var service = new UserService(users, new FakeProfilePictureStore(), unitOfWork);
 
             await service.CreateOrUpdateMyProfileAsync(
                 "subject-existing",
@@ -70,7 +84,7 @@ namespace Animal.UnitTests.Api
             var users = new FakeUserRepository();
             users.Items.Add(new User { Id = 1, ExternalId = "one", Name = "One", Email = "taken@example.com", PhoneNumber = "555-0100" });
             var unitOfWork = new FakeUnitOfWork();
-            var service = new UserService(users, unitOfWork);
+            var service = new UserService(users, new FakeProfilePictureStore(), unitOfWork);
 
             await Assert.ThrowsAsync<DuplicateValueException>(() => service.CreateOrUpdateMyProfileAsync(
                 "two",
@@ -84,7 +98,7 @@ namespace Animal.UnitTests.Api
         {
             var users = new FakeUserRepository();
             var unitOfWork = new FakeUnitOfWork();
-            var service = new UserService(users, unitOfWork);
+            var service = new UserService(users, new FakeProfilePictureStore(), unitOfWork);
 
             await Assert.ThrowsAsync<DomainValidationException>(() => service.CreateOrUpdateMyProfileAsync(
                 "subject-invalid",
@@ -118,6 +132,36 @@ namespace Animal.UnitTests.Api
             {
                 SaveCount++;
                 return Task.FromResult(1);
+            }
+        }
+
+        private sealed class FakeProfilePictureStore : IProfilePictureStore
+        {
+            private readonly Dictionary<int, ProfilePicture> _items = [];
+
+            public Task<ProfilePicture?> GetAsync(int userId, CancellationToken cancellationToken = default)
+            {
+                _items.TryGetValue(userId, out var picture);
+                return Task.FromResult(picture);
+            }
+
+            public Task SaveAsync(int userId, string contentType, byte[] bytes, CancellationToken cancellationToken = default)
+            {
+                _items[userId] = new ProfilePicture
+                {
+                    UserId = userId,
+                    ContentType = contentType,
+                    Bytes = bytes,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(int userId, CancellationToken cancellationToken = default)
+            {
+                _items.Remove(userId);
+                return Task.CompletedTask;
             }
         }
     }
