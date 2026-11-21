@@ -55,6 +55,7 @@ Key config: `src/Animal.API/appsettings.json` and `appsettings.Development.json`
 **Data**
 - Change the schema only through EF migrations. Never edit an applied migration or hand-edit the model snapshot.
 - Seed data goes in `Animal.Data/SeedData` and must contain fake data only.
+- Avoid any paid/commercial-license dependencies; prefer no-cost libraries suitable for non-commercial use.
 
 ## 4. Build and tests
 
