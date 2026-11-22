@@ -39,7 +39,7 @@ namespace Animal.Client.Services
             CancellationToken cancellationToken = default)
         {
             using var response = await _http.GetAsync("api/users/me/picture", cancellationToken);
-            if (response.StatusCode == HttpStatusCode.NoContent)
+            if (response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.NotFound)
             {
                 return null;
             }

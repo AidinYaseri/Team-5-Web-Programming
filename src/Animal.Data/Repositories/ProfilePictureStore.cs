@@ -19,6 +19,12 @@ namespace Animal.Data.Repositories
                 .FirstOrDefaultAsync(p => p.UserId == userId, cancellationToken);
         }
 
+        public Task<bool> ExistsAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return _context.ProfilePictures.AsNoTracking()
+                .AnyAsync(p => p.UserId == userId, cancellationToken);
+        }
+
         public async Task SaveAsync(int userId, string contentType, byte[] bytes, CancellationToken cancellationToken = default)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(contentType);

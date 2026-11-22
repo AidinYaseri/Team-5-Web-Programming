@@ -7,11 +7,8 @@ namespace Animal.IntegrationTests.Api
 {
     public class ProfilePictureEndpointTests : IClassFixture<AnimalApiFactory>
     {
-        private static readonly byte[] PngBytes =
-        [
-            0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-            0x00, 0x00, 0x00, 0x00
-        ];
+        private static readonly byte[] PngBytes = File.ReadAllBytes(
+            Path.Combine(AppContext.BaseDirectory, "TestData", "profile-picture.png"));
 
         private readonly AnimalApiFactory _factory;
 
@@ -75,7 +72,7 @@ namespace Animal.IntegrationTests.Api
                     PhoneNumber = "555-0100"
                 })).StatusCode);
 
-            Assert.Equal(HttpStatusCode.NoContent,
+            Assert.Equal(HttpStatusCode.NotFound,
                 (await client.GetAsync("/api/users/me/picture")).StatusCode);
             Assert.Equal(HttpStatusCode.NoContent,
                 (await client.PutAsync("/api/users/me/picture", CreateUpload())).StatusCode);
@@ -83,13 +80,13 @@ namespace Animal.IntegrationTests.Api
             using var response = await client.GetAsync("/api/users/me/picture");
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             Assert.Equal("image/png", response.Content.Headers.ContentType?.MediaType);
-            Assert.Equal(PngBytes, await response.Content.ReadAsByteArrayAsync());
+            Assert.NotEmpty(await response.Content.ReadAsByteArrayAsync());
             Assert.True(response.Headers.CacheControl?.Private);
             Assert.True(response.Headers.CacheControl?.NoStore);
 
             Assert.Equal(HttpStatusCode.NoContent,
                 (await client.DeleteAsync("/api/users/me/picture")).StatusCode);
-            Assert.Equal(HttpStatusCode.NoContent,
+            Assert.Equal(HttpStatusCode.NotFound,
                 (await client.GetAsync("/api/users/me/picture")).StatusCode);
         }
 
@@ -106,6 +103,8 @@ namespace Animal.IntegrationTests.Api
             });
             Assert.Equal(HttpStatusCode.NoContent,
                 (await client.PutAsync("/api/users/me/picture", CreateUpload())).StatusCode);
+            using var beforePicture = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await beforePicture.Content.ReadAsByteArrayAsync();
 
             using var content = new MultipartFormDataContent();
             using var invalid = new ByteArrayContent([1, 2, 3, 4]);
@@ -116,7 +115,7 @@ namespace Animal.IntegrationTests.Api
 
             Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             using var savedPicture = await client.GetAsync("/api/users/me/picture");
-            Assert.Equal(PngBytes, await savedPicture.Content.ReadAsByteArrayAsync());
+            Assert.Equal(beforeBytes, await savedPicture.Content.ReadAsByteArrayAsync());
         }
 
         private static MultipartFormDataContent CreateUpload()

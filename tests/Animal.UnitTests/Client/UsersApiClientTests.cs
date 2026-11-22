@@ -79,10 +79,12 @@ namespace Animal.UnitTests.Client
             Assert.Contains("\"email\":\"sam@example.com\"", handler.LastBody);
         }
 
-        [Fact]
-        public async Task GetMyProfilePictureAsync_NoContent_ReturnsNull()
+        [Theory]
+        [InlineData(HttpStatusCode.NotFound)]
+        [InlineData(HttpStatusCode.NoContent)]
+        public async Task GetMyProfilePictureAsync_NoPicture_ReturnsNull(HttpStatusCode statusCode)
         {
-            var handler = new FakeHandler(HttpStatusCode.NoContent, "");
+            var handler = new FakeHandler(statusCode, "");
             var client = new UsersApiClient(new HttpClient(handler) { BaseAddress = new Uri("http://api.test/") });
 
             var result = await client.GetMyProfilePictureAsync();
@@ -108,7 +110,6 @@ namespace Animal.UnitTests.Client
         [Theory]
         [InlineData(HttpStatusCode.BadRequest)]
         [InlineData(HttpStatusCode.Unauthorized)]
-        [InlineData(HttpStatusCode.NotFound)]
         public async Task GetMyProfilePictureAsync_ApiError_ThrowsWithStatusCode(HttpStatusCode statusCode)
         {
             var handler = new FakeHandler(statusCode, "{\"title\":\"Picture request failed.\"}");
