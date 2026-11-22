@@ -4,8 +4,10 @@ using System.Net.Http.Json;
 using Animal.API.Contracts;
 using Animal.Data.Context;
 using Animal.Data.Repositories;
+using Animal.Domain.Entities;
 using Animal.Domain.Services;
 using Animal.IntegrationTests.Api.TestDoubles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -401,13 +403,33 @@ namespace Animal.IntegrationTests.Api
             });
 
             var identity = NewIdentity();
-            using var setupClient = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
-            await setupClient.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
-            await setupClient.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+            using (var arrangeScope = factory.Services.CreateScope())
+            {
+                var arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+                var seededUser = new User
+                {
+                    ExternalId = identity.Subject,
+                    Name = "Seeded User",
+                    Email = identity.Email,
+                    PhoneNumber = "555-0100"
+                };
+                arrangeContext.Users.Add(seededUser);
+                await arrangeContext.SaveChangesAsync();
 
-            var beforeProfile = await setupClient.GetFromJsonAsync<UserResponse>("/api/users/me");
-            var beforePictureResponse = await setupClient.GetAsync("/api/users/me/picture");
-            var beforePictureBytes = await beforePictureResponse.Content.ReadAsByteArrayAsync();
+                arrangeContext.ProfilePictures.Add(new ProfilePicture
+                {
+                    UserId = seededUser.Id,
+                    ContentType = "image/png",
+                    Bytes = TinyPng(),
+                    UpdatedAt = DateTime.UtcNow
+                });
+                await arrangeContext.SaveChangesAsync();
+            }
+
+            using var beforeScope = factory.Services.CreateScope();
+            var beforeContext = beforeScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+            var beforeUser = await beforeContext.Users.AsNoTracking().SingleAsync(user => user.ExternalId == identity.Subject);
+            var beforePicture = await beforeContext.ProfilePictures.AsNoTracking().SingleAsync(row => row.UserId == beforeUser.Id);
 
             using var failingClient = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
             var failed = await failingClient.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "new.jpg"));
@@ -422,15 +444,16 @@ namespace Animal.IntegrationTests.Api
             Assert.DoesNotContain("\\", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("stack", body, StringComparison.OrdinalIgnoreCase);
 
-            var afterProfile = await setupClient.GetFromJsonAsync<UserResponse>("/api/users/me");
-            var afterPictureResponse = await setupClient.GetAsync("/api/users/me/picture");
-            var afterPictureBytes = await afterPictureResponse.Content.ReadAsByteArrayAsync();
+            using var afterScope = factory.Services.CreateScope();
+            var afterContext = afterScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+            var afterUser = await afterContext.Users.AsNoTracking().SingleAsync(user => user.ExternalId == identity.Subject);
+            var afterPicture = await afterContext.ProfilePictures.AsNoTracking().SingleAsync(row => row.UserId == afterUser.Id);
 
-            Assert.Equal(beforeProfile!.Name, afterProfile!.Name);
-            Assert.Equal(beforeProfile.Email, afterProfile.Email);
-            Assert.Equal(beforeProfile.PhoneNumber, afterProfile.PhoneNumber);
-            Assert.Equal(beforePictureResponse.Content.Headers.ContentType?.MediaType, afterPictureResponse.Content.Headers.ContentType?.MediaType);
-            Assert.Equal(beforePictureBytes, afterPictureBytes);
+            Assert.Equal(beforeUser.Name, afterUser.Name);
+            Assert.Equal(beforeUser.Email, afterUser.Email);
+            Assert.Equal(beforeUser.PhoneNumber, afterUser.PhoneNumber);
+            Assert.Equal(beforePicture.ContentType, afterPicture.ContentType);
+            Assert.Equal(beforePicture.Bytes, afterPicture.Bytes);
         }
 
         [Fact]
@@ -445,13 +468,34 @@ namespace Animal.IntegrationTests.Api
             });
 
             var identity = NewIdentity();
-            using var client = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
-            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
-            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+            using (var arrangeScope = factory.Services.CreateScope())
+            {
+                var arrangeContext = arrangeScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+                var seededUser = new User
+                {
+                    ExternalId = identity.Subject,
+                    Name = "Seeded User",
+                    Email = identity.Email,
+                    PhoneNumber = "555-0100"
+                };
+                arrangeContext.Users.Add(seededUser);
+                await arrangeContext.SaveChangesAsync();
 
+                arrangeContext.ProfilePictures.Add(new ProfilePicture
+                {
+                    UserId = seededUser.Id,
+                    ContentType = "image/png",
+                    Bytes = TinyPng(),
+                    UpdatedAt = DateTime.UtcNow
+                });
+                await arrangeContext.SaveChangesAsync();
+            }
+
+            using var client = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
             var beforeProfile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
-            var beforePictureResponse = await client.GetAsync("/api/users/me/picture");
-            var beforePictureBytes = await beforePictureResponse.Content.ReadAsByteArrayAsync();
+            using var beforeScope = factory.Services.CreateScope();
+            var beforeContext = beforeScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+            var beforePicture = await beforeContext.ProfilePictures.AsNoTracking().SingleAsync(row => row.UserId == beforeProfile!.Id);
 
             var failed = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "rollback.jpg"));
             var body = await failed.Content.ReadAsStringAsync();
@@ -462,14 +506,15 @@ namespace Animal.IntegrationTests.Api
             Assert.DoesNotContain("timeout", body, StringComparison.OrdinalIgnoreCase);
 
             var afterProfile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
-            var afterPictureResponse = await client.GetAsync("/api/users/me/picture");
-            var afterPictureBytes = await afterPictureResponse.Content.ReadAsByteArrayAsync();
+            using var afterScope = factory.Services.CreateScope();
+            var afterContext = afterScope.ServiceProvider.GetRequiredService<AnimalDbContext>();
+            var afterPicture = await afterContext.ProfilePictures.AsNoTracking().SingleAsync(row => row.UserId == afterProfile!.Id);
 
-            Assert.Equal(beforeProfile!.Name, afterProfile!.Name);
+            Assert.Equal(beforeProfile.Name, afterProfile.Name);
             Assert.Equal(beforeProfile.Email, afterProfile.Email);
             Assert.Equal(beforeProfile.PhoneNumber, afterProfile.PhoneNumber);
-            Assert.Equal(beforePictureResponse.Content.Headers.ContentType?.MediaType, afterPictureResponse.Content.Headers.ContentType?.MediaType);
-            Assert.Equal(beforePictureBytes, afterPictureBytes);
+            Assert.Equal(beforePicture.ContentType, afterPicture.ContentType);
+            Assert.Equal(beforePicture.Bytes, afterPicture.Bytes);
         }
 
         [Fact]

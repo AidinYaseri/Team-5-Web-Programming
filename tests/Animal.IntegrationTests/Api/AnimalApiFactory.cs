@@ -32,7 +32,7 @@ namespace Animal.IntegrationTests.Api
             _connection.Open();
         }
 
-        public AnimalApiFactory(
+        internal AnimalApiFactory(
             Action<IServiceCollection>? configureTestServices,
             Action<ILoggingBuilder>? configureLogging)
         {
@@ -41,12 +41,12 @@ namespace Animal.IntegrationTests.Api
             _connection.Open();
         }
 
-        public AnimalApiFactory(Action<IServiceCollection> configureTestServices)
+        internal AnimalApiFactory(Action<IServiceCollection> configureTestServices)
             : this(configureTestServices, null)
         {
         }
 
-        public AnimalApiFactory(Action<ILoggingBuilder> configureLogging)
+        internal AnimalApiFactory(Action<ILoggingBuilder> configureLogging)
             : this(null, configureLogging)
         {
         }

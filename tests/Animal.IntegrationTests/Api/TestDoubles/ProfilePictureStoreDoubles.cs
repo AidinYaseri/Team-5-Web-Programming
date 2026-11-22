@@ -7,11 +7,18 @@ namespace Animal.IntegrationTests.Api.TestDoubles
 {
     public sealed class ThrowingProfilePictureStore : IProfilePictureStore
     {
+        private readonly AnimalDbContext _context;
+
+        public ThrowingProfilePictureStore(AnimalDbContext context)
+        {
+            _context = context;
+        }
+
         public Task<bool> ExistsAsync(int userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult(false);
+            _context.ProfilePictures.AsNoTracking().AnyAsync(picture => picture.UserId == userId, cancellationToken);
 
         public Task<ProfilePicture?> GetAsync(int userId, CancellationToken cancellationToken = default) =>
-            Task.FromResult<ProfilePicture?>(null);
+            _context.ProfilePictures.AsNoTracking().FirstOrDefaultAsync(picture => picture.UserId == userId, cancellationToken);
 
         public Task SaveAsync(int userId, string contentType, byte[] bytes, CancellationToken cancellationToken = default)
         {
