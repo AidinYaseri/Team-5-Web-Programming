@@ -132,8 +132,10 @@ namespace Animal.UnitTests.Client
             Assert.Equal(HttpMethod.Put, handler.LastRequest!.Method);
             Assert.Equal("http://api.test/api/users/me/picture", handler.LastRequest.RequestUri!.ToString());
             Assert.Equal("multipart/form-data", handler.LastRequest.Content!.Headers.ContentType!.MediaType);
-            Assert.Contains("name=\"file\"; filename=\"profile.png\"", handler.LastBody);
-            Assert.Contains("Content-Type: image/png", handler.LastBody);
+            Assert.Equal("file", handler.MultipartName);
+            Assert.Equal("profile.png", handler.MultipartFileName);
+            Assert.Equal("image/png", handler.MultipartContentType);
+            Assert.Equal("image bytes", handler.MultipartPayload);
         }
 
         [Theory]
@@ -200,12 +202,24 @@ namespace Animal.UnitTests.Client
 
             public HttpRequestMessage? LastRequest { get; private set; }
             public string? LastBody { get; private set; }
+            public string? MultipartName { get; private set; }
+            public string? MultipartFileName { get; private set; }
+            public string? MultipartContentType { get; private set; }
+            public string? MultipartPayload { get; private set; }
 
             protected override async Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request,
                 CancellationToken cancellationToken)
             {
                 LastRequest = request;
+                if (request.Content is MultipartFormDataContent multipart)
+                {
+                    var fileContent = multipart.Single();
+                    MultipartName = fileContent.Headers.ContentDisposition?.Name?.Trim('"');
+                    MultipartFileName = fileContent.Headers.ContentDisposition?.FileName?.Trim('"');
+                    MultipartContentType = fileContent.Headers.ContentType?.MediaType;
+                    MultipartPayload = await fileContent.ReadAsStringAsync(cancellationToken);
+                }
                 LastBody = request.Content is null
                     ? null
                     : await request.Content.ReadAsStringAsync(cancellationToken);
