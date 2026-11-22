@@ -3,8 +3,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Animal.API.Contracts;
 using Animal.Data.Context;
+using Animal.Data.Repositories;
 using Animal.Domain.Services;
+using Animal.IntegrationTests.Api.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 
 namespace Animal.IntegrationTests.Api
 {
@@ -385,6 +389,116 @@ namespace Animal.IntegrationTests.Api
 
             Assert.False(before!.HasPicture);
             Assert.True(after!.HasPicture);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_WhenStoreThrows_ReturnsSanitizedProblemDetails_AndKeepsProfileAndPictureUnchanged()
+        {
+            using var factory = new AnimalApiFactory(services =>
+            {
+                services.RemoveAll<IProfilePictureStore>();
+                services.AddScoped<IProfilePictureStore, ThrowingProfilePictureStore>();
+            });
+
+            var identity = NewIdentity();
+            using var setupClient = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await setupClient.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await setupClient.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var beforeProfile = await setupClient.GetFromJsonAsync<UserResponse>("/api/users/me");
+            var beforePictureResponse = await setupClient.GetAsync("/api/users/me/picture");
+            var beforePictureBytes = await beforePictureResponse.Content.ReadAsByteArrayAsync();
+
+            using var failingClient = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            var failed = await failingClient.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "new.jpg"));
+            var body = await failed.Content.ReadAsStringAsync();
+
+            Assert.True(failed.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable);
+            Assert.Contains("type", body, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("title", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("SELECT", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("\\", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("stack", body, StringComparison.OrdinalIgnoreCase);
+
+            var afterProfile = await setupClient.GetFromJsonAsync<UserResponse>("/api/users/me");
+            var afterPictureResponse = await setupClient.GetAsync("/api/users/me/picture");
+            var afterPictureBytes = await afterPictureResponse.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(beforeProfile!.Name, afterProfile!.Name);
+            Assert.Equal(beforeProfile.Email, afterProfile.Email);
+            Assert.Equal(beforeProfile.PhoneNumber, afterProfile.PhoneNumber);
+            Assert.Equal(beforePictureResponse.Content.Headers.ContentType?.MediaType, afterPictureResponse.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforePictureBytes, afterPictureBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_WhenUnitOfWorkThrows_RollsBackPictureAndProfileMutation()
+        {
+            using var factory = new AnimalApiFactory(services =>
+            {
+                services.RemoveAll<IProfilePictureStore>();
+                services.RemoveAll<IUnitOfWork>();
+                services.AddScoped<IProfilePictureStore, MutatingProfilePictureStore>();
+                services.AddScoped<IUnitOfWork, ThrowingUnitOfWork>();
+            });
+
+            var identity = NewIdentity();
+            using var client = factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var beforeProfile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+            var beforePictureResponse = await client.GetAsync("/api/users/me/picture");
+            var beforePictureBytes = await beforePictureResponse.Content.ReadAsByteArrayAsync();
+
+            var failed = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "rollback.jpg"));
+            var body = await failed.Content.ReadAsStringAsync();
+
+            Assert.True(failed.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable);
+            Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("timeout", body, StringComparison.OrdinalIgnoreCase);
+
+            var afterProfile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+            var afterPictureResponse = await client.GetAsync("/api/users/me/picture");
+            var afterPictureBytes = await afterPictureResponse.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(beforeProfile!.Name, afterProfile!.Name);
+            Assert.Equal(beforeProfile.Email, afterProfile.Email);
+            Assert.Equal(beforeProfile.PhoneNumber, afterProfile.PhoneNumber);
+            Assert.Equal(beforePictureResponse.Content.Headers.ContentType?.MediaType, afterPictureResponse.Content.Headers.ContentType?.MediaType);
+            Assert.Equal(beforePictureBytes, afterPictureBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_LogsDoNotContainTokenEmailOrImageBytes()
+        {
+            var loggerProvider = new InMemoryLoggerProvider();
+            var identity = NewIdentity();
+            var requestBytes = TinyPng();
+            var token = string.Empty;
+
+            using var factory = new AnimalApiFactory(logging =>
+            {
+                logging.ClearProviders();
+                logging.AddProvider(loggerProvider);
+            });
+
+            token = factory.CreateToken(subject: identity.Subject, scopes: ["users.read", "users.write"]);
+            using var client = factory.CreateClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(requestBytes, "image/png"));
+
+            var logs = string.Join("\n", loggerProvider.Entries);
+            var byteMarker = Convert.ToBase64String(requestBytes.Take(Math.Min(24, requestBytes.Length)).ToArray());
+
+            Assert.DoesNotContain(identity.Email, logs, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(token, logs, StringComparison.Ordinal);
+            Assert.DoesNotContain(byteMarker, logs, StringComparison.Ordinal);
         }
 
         private static MultipartFormDataContent CreateImageUpload(byte[] bytes, string contentType, string fileName = "picture.png")

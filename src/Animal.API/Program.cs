@@ -37,8 +37,16 @@ builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IAdoptionService, AdoptionService>();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options =>
+{
+    options.CustomizeProblemDetails = context =>
+    {
+        context.ProblemDetails.Extensions.Remove("exception");
+        context.ProblemDetails.Extensions.Remove("stackTrace");
+    };
+});
 builder.Services.AddExceptionHandler<DomainExceptionHandler>();
+builder.Services.AddExceptionHandler<UnhandledExceptionHandler>();
 
 // Resource server: validate the provider's access tokens (signature, issuer, audience, lifetime).
 builder.Services

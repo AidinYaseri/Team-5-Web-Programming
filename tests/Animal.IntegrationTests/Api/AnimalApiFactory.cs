@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 
@@ -23,14 +24,40 @@ namespace Animal.IntegrationTests.Api
         // Kept open for the factory's lifetime: an in-memory SQLite database disappears when its last connection closes.
         private readonly SqliteConnection _connection = new("DataSource=:memory:");
         private readonly TestTokenFactory _tokenFactory = new();
+        private readonly Action<IServiceCollection>? _configureTestServices;
+        private readonly Action<ILoggingBuilder>? _configureLogging;
 
         public AnimalApiFactory()
         {
             _connection.Open();
         }
 
+        public AnimalApiFactory(
+            Action<IServiceCollection>? configureTestServices,
+            Action<ILoggingBuilder>? configureLogging)
+        {
+            _configureTestServices = configureTestServices;
+            _configureLogging = configureLogging;
+            _connection.Open();
+        }
+
+        public AnimalApiFactory(Action<IServiceCollection> configureTestServices)
+            : this(configureTestServices, null)
+        {
+        }
+
+        public AnimalApiFactory(Action<ILoggingBuilder> configureLogging)
+            : this(null, configureLogging)
+        {
+        }
+
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
+            if (_configureLogging is not null)
+            {
+                builder.ConfigureLogging(_configureLogging);
+            }
+
             builder.ConfigureTestServices(services =>
             {
                 // Both are needed: EF Core 9+ keeps the UseSqlServer call in IDbContextOptionsConfiguration.
@@ -58,6 +85,8 @@ namespace Animal.IntegrationTests.Api
                     options.TokenValidationParameters.IssuerSigningKey = signingKey;
                     options.TokenValidationParameters.IssuerSigningKeys = [signingKey];
                 });
+
+                _configureTestServices?.Invoke(services);
             });
         }
 
