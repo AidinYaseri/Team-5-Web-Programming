@@ -10,14 +10,14 @@ There is one contract test class per API client under tests/Animal.IntegrationTe
 | --- | --- |
 | PetsApiClient | Creates and updates a pet through client request DTOs, then checks every PetResponse field on read. Also exercises query parameter names and delete/not-found behavior. |
 | SheltersApiClient | Creates and updates a shelter through client request DTOs, then checks every ShelterResponse field on read. |
-| UsersApiClient | Updates a profile through the client request DTO and checks every field in the client UserResponse; missing profiles map to null. |
+| UsersApiClient | Updates a profile through the client request DTO and checks every field in the client UserResponse; missing profiles map to null. Uploads a picture using the client multipart call, reads the returned image content type and PNG signature, then deletes it and confirms the client reports no picture. |
 | AdoptionsApiClient | Applies using the client request DTO, then checks all response fields and the user's list response. |
 | AppointmentsApiClient | Books using the client request DTO, then checks every response field and the user's list response. |
 | NotificationsApiClient | Reads a notification into the client DTO, checks every field, and marks it read through the client route. |
 
 A successful client call against the API verifies that the request shape and route are accepted; tests assert returned values rather than only checking that the status is not 400. Fixed TimeProvider values keep generated adoption and appointment timestamps deterministic.
 
-The profile-picture client methods are not present on the WI-7 branch's milestone base yet. Add the equivalent upload/get/delete contract checks after WI-6 is merged into the milestone branch.
+The profile-picture contract check uses AnimalApiFactory and the client UsersApiClient methods. The test confirms multipart upload, image response parsing, and deletion through the real API host; the failure-handler tests also exercise 500/503, invalid or empty error bodies, and timeout behavior for each picture call.
 
 ## Failure handling
 

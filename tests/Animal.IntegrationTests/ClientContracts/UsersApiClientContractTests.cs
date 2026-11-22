@@ -34,6 +34,38 @@ namespace Animal.IntegrationTests.ClientContracts
         }
 
         [Fact]
+        public async Task ProfilePictureRequests_AreAcceptedAndClientReadsReturnedImage()
+        {
+            var suffix = Guid.NewGuid().ToString("N");
+            using var http = _factory.CreateAuthenticatedClient(
+                $"picture-contract-{suffix}", ["users.read", "users.write"]);
+            var users = new ClientServices.UsersApiClient(http);
+
+            await users.UpdateMyProfileAsync(new ClientModels.UpdateUserRequest
+            {
+                Name = "Picture Contract User",
+                Email = $"{suffix}@example.test",
+                PhoneNumber = "555-0192"
+            });
+
+            var imagePath = Path.Combine(AppContext.BaseDirectory, "TestData", "profile-picture.png");
+            await using (var imageStream = File.OpenRead(imagePath))
+            {
+                await users.UploadMyProfilePictureAsync(imageStream, "profile.png", "image/png");
+            }
+
+            var picture = await users.GetMyProfilePictureAsync();
+
+            Assert.NotNull(picture);
+            Assert.Equal("image/png", picture.ContentType);
+            Assert.True(picture.Bytes.Length > 8);
+            Assert.Equal(new byte[] { 137, 80, 78, 71, 13, 10, 26, 10 }, picture.Bytes[..8]);
+
+            await users.DeleteMyProfilePictureAsync();
+            Assert.Null(await users.GetMyProfilePictureAsync());
+        }
+
+        [Fact]
         public async Task MissingProfile_IsReturnedAsNull()
         {
             using var http = _factory.CreateAuthenticatedClient(

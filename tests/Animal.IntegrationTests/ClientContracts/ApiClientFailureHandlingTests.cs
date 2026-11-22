@@ -13,6 +13,14 @@ namespace Animal.IntegrationTests.ClientContracts
             ("pets", async http => { await new ClientServices.PetsApiClient(http).GetPetsAsync(null, null, false); }),
             ("shelters", async http => { await new ClientServices.SheltersApiClient(http).GetSheltersAsync(); }),
             ("users", async http => { await new ClientServices.UsersApiClient(http).GetMyProfileAsync(); }),
+            ("users picture get", async http => { await new ClientServices.UsersApiClient(http).GetMyProfilePictureAsync(); }),
+            ("users picture upload", async http =>
+            {
+                using var stream = new MemoryStream(new byte[] { 1, 2, 3 });
+                await new ClientServices.UsersApiClient(http).UploadMyProfilePictureAsync(
+                    stream, "profile.png", "image/png");
+            }),
+            ("users picture delete", async http => { await new ClientServices.UsersApiClient(http).DeleteMyProfilePictureAsync(); }),
             ("adoptions", async http => { await new ClientServices.AdoptionsApiClient(http).GetMineAsync(); }),
             ("appointments", async http => { await new ClientServices.AppointmentsApiClient(http).GetMineAsync(); }),
             ("notifications", async http => { await new ClientServices.NotificationsApiClient(http).GetAsync(); })
