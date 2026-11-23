@@ -6,6 +6,7 @@ erDiagram
     USERS ||--o{ APPOINTMENTS : books
     PETS ||--o{ APPOINTMENTS : "visited in"
     USERS ||--o{ NOTIFICATIONS : receives
+    USERS ||--o| PROFILE_PICTURES : "has (Milestone 4)"
 
     SHELTERS {
         int Id PK
@@ -51,4 +52,10 @@ erDiagram
         nvarchar Message
         datetime2 Date
         bit IsRead
+    }
+    PROFILE_PICTURES {
+        int UserId PK, FK "cascade, one per user"
+        nvarchar ContentType "image/png or image/jpeg"
+        varbinary Bytes "re-encoded, at most 2 MB"
+        datetime2 UpdatedAt
     }

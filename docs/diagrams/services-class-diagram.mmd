@@ -22,6 +22,9 @@ classDiagram
         <<interface>>
         +GetMyProfileAsync(subject, token) Task~UserResponse~
         +CreateOrUpdateMyProfileAsync(subject, request, token) Task
+        +SaveMyProfilePictureAsync(subject, contentType, bytes, token) Task
+        +GetMyProfilePictureAsync(subject, token) Task
+        +DeleteMyProfilePictureAsync(subject, token) Task
     }
     class IAdoptionService {
         <<interface>>
@@ -69,6 +72,7 @@ classDiagram
     PetService --> IShelterRepository
     ShelterService --> IShelterRepository
     UserService --> IUserRepository
+    UserService --> IProfilePictureStore : checks, re-encodes and stores the picture
     AdoptionService --> IAdoptionRepository
     AdoptionService --> IPetRepository
     AdoptionService --> INotificationService : notifies applicants

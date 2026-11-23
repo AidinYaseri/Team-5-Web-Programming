@@ -23,16 +23,16 @@ Project references flow inward: `Animal.API` references `Animal.Domain` and `Ani
 flowchart LR
     Browser[Browser]
     Client[Animal.Client<br/>Blazor Server]
-    Identity[OIDC identity provider]
+    Identity[Keycloak<br/>OIDC identity provider]
     API[Animal.API<br/>REST endpoints]
-    Auth[JWT bearer + scope policies]
+    Auth[JWT bearer + scope policies<br/>+ staff role]
     Subject[Resolve token sub to User.ExternalId]
     Services[Application services]
     Domain[Animal.Domain<br/>entities + rules]
     Data[Animal.Data<br/>EF Core repositories]
     DB[(SQL Server)]
 
-    Browser <-->|interactive UI + cookie| Client
+    Browser <-->|interactive UI + session-key cookie| Client
     Client <-->|authorization code + PKCE| Identity
     Client -->|HTTP / JSON + bearer token| API
     API --> Auth
@@ -44,7 +44,7 @@ flowchart LR
     Data --> DB
 ```
 
-The client and API are separate processes. `Animal.Client` calls the API through typed `HttpClient` services. Its OIDC code flow uses PKCE; the client secret, when required by the identity provider, stays in server-side configuration. The API validates bearer tokens and scope claims when WI-3 authentication is configured.
+The client and API are separate processes. `Animal.Client` calls the API through typed `HttpClient` services. Sign-in uses Keycloak with the authorization code flow and PKCE. The session and the access token stay on the client's server (`InMemoryTicketStore`); the browser only gets an `HttpOnly` cookie holding a session key, so page scripts never see a token and signing out ends that device's session. The API validates every bearer token (signature, issuer, audience, lifetime) and checks a scope per operation, plus the `staff` role for staff operations. Details: [auth.md](docs/milestone-3/auth.md).
 
 ### Sign-in and API request flow
 
@@ -59,9 +59,9 @@ sequenceDiagram
     IdP-->>Client: Authorization code
     Client->>IdP: Exchange code with PKCE verifier
     IdP-->>Client: ID token and API access token
-    Client-->>Adopter: Establish server-side sign-in session
+    Client-->>Adopter: Server-side session (cookie holds only a session key)
     Client->>API: HTTP request with bearer access token
-    API->>API: Validate issuer, audience, lifetime and scope
+    API->>API: Validate signature, issuer, audience, lifetime, scope (and staff role)
     API-->>Client: JSON response
 ```
 
@@ -98,20 +98,25 @@ In a second terminal, start the client:
 dotnet run --project src/Animal.Client
 ```
 
-The client listens on `http://localhost:5012` and uses `AnimalApi:BaseUrl` from its configuration to reach the API. Browse pets without signing in. To enable sign-in, configure an OIDC authority and client ID for the client and the matching authority/audience for the API. Keep any client secret in user-secrets or an environment variable; never put it in browser code or committed settings.
+The client listens on `http://localhost:5012` and uses `AnimalApi:BaseUrl` from its configuration to reach the API. Browse pets without signing in.
 
 In Visual Studio, you can start both processes together by right-clicking the solution, choosing **Configure Startup Projects**, selecting **Multiple startup projects**, and setting both `Animal.API` and `Animal.Client` to **Start**. The API must be listening on `http://localhost:5015` before the client loads API-backed pages.
 
-For local OIDC configuration, set values with user-secrets from the repository root:
+### Sign-in (Keycloak)
+
+Sign-in uses a local Keycloak in Docker. Follow [identity-provider-setup.md](docs/milestone-4/identity-provider-setup.md) once (about 10 minutes): it starts Keycloak with `docker compose` in `keycloak/`, imports the `animal` realm, and creates the test users `adopter1`, `adopter2` and `staff1` (staff role).
+
+The authority, audience and client ID are already in `appsettings.Development.json`. The only value you set yourself is the client secret, which stays out of the repository:
 
 ```powershell
-dotnet user-secrets init --project src/Animal.Client
-dotnet user-secrets set "Authentication:Authority" "https://your-provider.example/" --project src/Animal.Client
-dotnet user-secrets set "Authentication:ClientId" "your-client-id" --project src/Animal.Client
-dotnet user-secrets set "Authentication:ClientSecret" "your-server-side-secret" --project src/Animal.Client
+dotnet user-secrets set "Authentication:ClientSecret" "<secret from Keycloak>" --project src/Animal.Client
 ```
 
-Set the provider's API scopes with `Authentication:Scopes` and align the API's `Authentication:Authority` and `Authentication:Audience` settings. The API maps the validated token's `sub` to the local user's `ExternalId`; the provider does not need to send the database's numeric user ID. The local API CORS origin is configurable through `Cors:ClientOrigin` (Development defaults to `http://localhost:5012`).
+The Keycloak admin password goes in `keycloak/.env` (gitignored, copy `.env.example`). The API maps the validated token's `sub` to the local user's `ExternalId`; the provider never sends the database's numeric user ID. The local API CORS origin is configurable through `Cors:ClientOrigin` (Development defaults to `http://localhost:5012`).
+
+### Profile picture
+
+Signed-in users can upload a PNG or JPEG on **My profile**. The API (`/api/users/me/picture`) checks the file's real format and declared type, rejects files over 2 MB or 2048 × 2048 pixels before decoding, re-encodes the image with SkiaSharp (removing metadata), and stores it in the `ProfilePictures` table, so it shows on every device the user signs in on. There is no route with a user id: each user can only reach their own picture.
 
 ## Data and tests
 
@@ -121,13 +126,28 @@ EF Core mappings are in `src/Animal.Data/Configurations`; migrations are in `src
 dotnet ef database update --project src/Animal.Data --startup-project src/Animal.Data
 ```
 
-Run the test suite with:
+Run the whole test suite with:
 
 ```powershell
 dotnet test Team-5-Web-Programming.slnx
 ```
 
-Unit tests cover domain rules. API integration tests run the real `Program.cs` registrations against an in-memory SQLite database.
+The tests need no Keycloak, Docker or database server: they sign their own test tokens and use in-memory SQLite. CI runs them on every pull request into `main` or the milestone branch.
+
+| Type | Where | What it covers | Run only these |
+|---|---|---|---|
+| Unit | `tests/Animal.UnitTests` | Domain rules, application services with fakes, client API classes and token handling, layer rules | `dotnet test tests/Animal.UnitTests` |
+| Integration | `tests/Animal.IntegrationTests/Api`, `Data`, `Client` | API status codes and responses through the real `Program.cs`, repositories, authentication and authorization, upload rules, failure handling, the client host | `dotnet test tests/Animal.IntegrationTests` |
+| Contract | `tests/Animal.IntegrationTests/ClientContracts` | Each client API class against the real API, plus client failure handling ([testing.md](docs/milestone-4/testing.md)) | `dotnet test tests/Animal.IntegrationTests --filter "FullyQualifiedName~ClientContracts"` |
+| End-to-end | `CrossDeviceProfileTests`, `ClientSignOutTests` | The cross-device profile and picture journey and sign-out, plus a manual check with Keycloak ([cross-device-manual-check.md](docs/milestone-4/cross-device-manual-check.md)) | `dotnet test tests/Animal.IntegrationTests --filter "FullyQualifiedName~CrossDevice\|FullyQualifiedName~ClientSignOut"` |
+
+## Security documents (Milestone 4)
+
+- [decisions.md](docs/milestone-4/decisions.md): security decisions (identity provider, tokens, picture rules, storage, secrets)
+- [api-contracts.md](docs/milestone-4/api-contracts.md): picture endpoints and authorization changes
+- [threat-model.md](docs/milestone-4/threat-model.md): threats, mitigations and the tests that prove them
+- [secrets-and-config.md](docs/milestone-4/secrets-and-config.md): which settings are secret and where they live
+- [auth.md](docs/milestone-3/auth.md): scope and role required by every endpoint
 
 ## Team conventions
 
