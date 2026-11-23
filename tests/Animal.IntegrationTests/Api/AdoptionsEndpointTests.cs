@@ -33,7 +33,7 @@ namespace Animal.IntegrationTests.Api
             _factory.CreateAuthenticatedClient(userId.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 scopes.Length == 0 ? ["adoptions.read", "adoptions.write"] : scopes);
 
-        private HttpClient ReviewerClient() => _factory.CreateAuthenticatedClient(Reviewer, ["adoptions.review"]);
+        private HttpClient ReviewerClient() => _factory.CreateAuthenticatedClient(Reviewer, ["adoptions.review"], AnimalApiFactory.StaffRoles);
 
         private static async Task<AdoptionResponse> ApplyAsync(HttpClient client, int petId)
         {
@@ -161,6 +161,17 @@ namespace Animal.IntegrationTests.Api
         public async Task Queue_RequiresReviewScope()
         {
             using var adopter = Adopter(51);
+
+            var response = await adopter.GetAsync("/api/adoptions?status=Pending");
+
+            Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task Queue_ReviewScopeWithoutStaffRole_ReturnsForbidden()
+        {
+            // Any user can ask the identity provider for adoptions.review, so the scope alone isn't enough.
+            using var adopter = _factory.CreateAuthenticatedClient(Reviewer, ["adoptions.review"]);
 
             var response = await adopter.GetAsync("/api/adoptions?status=Pending");
 
