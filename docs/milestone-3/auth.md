@@ -147,6 +147,9 @@ Every controller action has an explicit attribute; anything else falls back to "
 | `POST`, `PUT`, `DELETE` | `/api/shelters`, `/api/shelters/{id}` | `shelters.write` + role `staff` |
 | `GET` | `/api/users/me` | `users.read` |
 | `PUT` | `/api/users/me` | `users.write` |
+| `GET` | `/api/users/me/picture` | `users.read` (own picture only; `Cache-Control: private, no-store`) |
+| `PUT` | `/api/users/me/picture` | `users.write` (PNG/JPEG, 2 MB file, 3 MB request, 2048 × 2048 max) |
+| `DELETE` | `/api/users/me/picture` | `users.write` |
 | `GET` | `/api/appointments` | `appointments.read` + mapped local user |
 | `POST` | `/api/appointments`, `/api/appointments/{id}/cancel` | `appointments.write` + mapped local user |
 | `GET` | `/api/notifications` | `notifications.read` + mapped local user |

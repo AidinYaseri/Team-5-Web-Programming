@@ -1,35 +1,39 @@
 flowchart LR
     Browser[Browser]
     Client[Animal.Client<br/>Blazor Server]
-    Identity[OIDC identity provider]
+    Identity[Keycloak<br/>realm animal]
+    Sessions[(Server-side sessions<br/>InMemoryTicketStore)]
 
     subgraph API["Animal.API · REST endpoints"]
         direction TB
         Pets[PetsController]
         Shelters[SheltersController]
-        Users[UsersController]
+        Users[UsersController<br/>/me and /me/picture]
         Adoptions[AdoptionsController]
         Appointments[AppointmentsController]
         Notifications[NotificationsController]
-        Auth[JWT bearer + scope policies<br/>deny by default]
+        Auth[JWT bearer + scope policies<br/>staff role for staff operations<br/>deny by default]
         Services[Application services]
+        Images[Image check and re-encode<br/>SkiaSharp]
     end
 
     subgraph DOMAIN["Animal.Domain · entities and rules"]
-        Rules[PetRules · ShelterRules · UserRules<br/>AdoptionRules · AppointmentRules · NotificationRules]
-        Entities[Pets · Shelters · Users<br/>Adoptions · Appointments · Notifications]
+        Rules[PetRules · ShelterRules · UserRules<br/>AdoptionRules · AppointmentRules · NotificationRules<br/>ProfilePictureRules]
+        Entities[Pets · Shelters · Users<br/>Adoptions · Appointments · Notifications<br/>ProfilePictures]
     end
 
     subgraph DATA["Animal.Data · EF Core"]
         Repos[Repositories]
         UserRepo[UserRepository · ExternalId lookup]
+        PictureStore[ProfilePictureStore]
         UnitOfWork[IUnitOfWork]
         Context[AnimalDbContext<br/>Configurations and migrations]
     end
 
     Database[(SQL Server)]
 
-    Browser <-->|interactive UI and sign-in cookie| Client
+    Browser <-->|interactive UI and session-key cookie| Client
+    Client <-->|session and tokens stay on the server| Sessions
     Client <-->|OIDC authorization code + PKCE| Identity
     Client -->|HTTP / JSON + bearer access token| API
     Auth -->|validated sub| UserRepo
@@ -44,6 +48,9 @@ flowchart LR
     Services --> Rules
     Services --> Entities
     Services --> Repos
+    Services --> Images
+    Services --> PictureStore
+    PictureStore --> Context
     Services --> UnitOfWork
     UnitOfWork -->|one save for related changes| Context
     Repos --> Context
