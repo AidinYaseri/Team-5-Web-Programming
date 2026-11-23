@@ -27,7 +27,7 @@ This is the manual version of the spec's cross-device journey, with the real Key
 | 7 | B | Sign out, sign in as `adopter2`, open **My profile** | `adopter2`'s own profile (or "no profile yet"), never Ada's name or picture | `07-other-user.png` |
 | 8 | B | Open `http://localhost:5015/api/users/1` (Ada's id) | 404 or 401. There's no route that takes a user id | |
 | 9 | A | Click **Sign out** | Back on the home page, signed out | |
-| 10 | A | Open **My profile** | "Sign in to see your profile" | `10-a-signed-out.png` |
+| 10 | A | Open **My profile** | Asked to sign in again (the app sends you to the Keycloak sign-in page) | `10-a-signed-out.png` |
 | 11 | B | (Sign back in as `adopter1` if needed) refresh **My profile** | Still works: signing out on A didn't touch B | |
 | 12 | A | Click **Sign in** | Keycloak asks for the password again | |
 
@@ -54,7 +54,7 @@ Save the screenshots in `docs/milestone-4/screenshots/cross-device/` and link th
 | 5 | A | ![Picture uploaded on Device A](screenshots/cross-device/05-a-picture.png) |
 | 6 | B | ![Device B shows the same picture](screenshots/cross-device/06-b-sees-picture.png) |
 | 7 | B | ![adopter2 sees only their own profile](screenshots/cross-device/07-other-user.png) |
-| 10 | A | ![Device A after signing out](screenshots/cross-device/10-a-signed-out.png) |
+| 10 | A | ![Device A after signing out: opening My profile goes to the Keycloak sign-in page](screenshots/cross-device/10-a-signed-out.png) |
 
 ### What this shows
 
