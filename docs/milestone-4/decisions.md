@@ -33,7 +33,7 @@ These are decided before anyone starts coding, as the Milestone 4 spec asks, so 
 | D8 | Picture storage | `IProfilePictureStore` with a `ProfilePictures` table in the same database | WI-4, WI-5, WI-8 |
 | D9 | Picture access | Only through `/api/users/me/picture`, no public or temporary links | WI-5, WI-6 |
 | D10 | Profile response | `UserResponse` gets `hasPicture` | WI-5, WI-6, WI-7 |
-| D11 | Errors from failing dependencies | Generic 500 ProblemDetails, nothing saved | WI-5, WI-8 |
+| D11 | Errors from failing dependencies | Generic ProblemDetails: 503 for a timeout, 500 otherwise; nothing saved | WI-5, WI-8 |
 | D12 | Secret store | `dotnet user-secrets` locally, environment variables elsewhere, a gitignored `.env` for Docker | WI-2, WI-9 |
 | D13 | Test doubles | Locally signed tokens for the provider, in-memory and failing stores for storage | WI-7, WI-8, WI-10 |
 | D14 | Contract tests | The integration tests call the real API and read the JSON into the client's own DTOs | WI-7 |
@@ -161,7 +161,7 @@ The browser can't send our bearer token by itself, so the client (WI-6) fetches 
 
 ## D11: Errors from failing dependencies
 
-If the database or the store fails, the API returns the normal ProblemDetails **500** from the default exception handler ("An error occurred while processing your request." and a `traceId`). There's no exception message, SQL, connection string or file path in the body. Nothing is saved, because the one save didn't happen. The full error is logged on the server without the image bytes, tokens or personal data. WI-8 tests all of this.
+If the database or the store fails, `UnhandledExceptionHandler` returns a generic ProblemDetails. A timeout (`TimeoutException`) gets **503** ("A required dependency is temporarily unavailable."), because trying again later can work. Anything else gets **500** ("An unexpected error occurred."). The body only has `type`, `title`, `status` and `traceId`: there's no exception message, SQL, connection string or file path. Nothing is saved, because the one save didn't happen. The full error is logged on the server without the image bytes, tokens or personal data. WI-8 tests all of this, and each test checks one exact status: `PutMyPicture_WhenStoreThrows_ReturnsSanitizedProblemDetails_AndKeepsProfileAndPictureUnchanged` (500) and `PutMyPicture_WhenUnitOfWorkThrows_RollsBackPictureAndProfileMutation` (503).
 
 ## D12: Secret store
 

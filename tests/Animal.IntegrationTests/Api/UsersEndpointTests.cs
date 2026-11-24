@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Animal.API.Contracts;
 using Animal.Data.Context;
 using Animal.Data.Repositories;
@@ -507,9 +508,8 @@ namespace Animal.IntegrationTests.Api
             var failed = await failingClient.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "new.jpg"));
             var body = await failed.Content.ReadAsStringAsync();
 
-            Assert.True(failed.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable);
-            Assert.Contains("type", body, StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("title", body, StringComparison.OrdinalIgnoreCase);
+            // Any failure that isn't a timeout is a plain 500.
+            AssertGenericProblem(failed, body, HttpStatusCode.InternalServerError, "An unexpected error occurred.");
             Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("SELECT", body, StringComparison.OrdinalIgnoreCase);
@@ -572,7 +572,8 @@ namespace Animal.IntegrationTests.Api
             var failed = await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyJpeg(), "image/jpeg", "rollback.jpg"));
             var body = await failed.Content.ReadAsStringAsync();
 
-            Assert.True(failed.StatusCode is HttpStatusCode.InternalServerError or HttpStatusCode.ServiceUnavailable);
+            // ThrowingUnitOfWork throws a TimeoutException, which the API reports as 503.
+            AssertGenericProblem(failed, body, HttpStatusCode.ServiceUnavailable, "A required dependency is temporarily unavailable.");
             Assert.DoesNotContain("Password=", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("Server=", body, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("timeout", body, StringComparison.OrdinalIgnoreCase);
@@ -625,6 +626,21 @@ namespace Animal.IntegrationTests.Api
             file.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
             content.Add(file, "file", fileName);
             return content;
+        }
+
+        // The body must be the generic ProblemDetails and nothing else: no message, detail or stack trace.
+        private static void AssertGenericProblem(HttpResponseMessage response, string body, HttpStatusCode expectedStatus, string expectedTitle)
+        {
+            Assert.Equal(expectedStatus, response.StatusCode);
+            Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+            using var json = JsonDocument.Parse(body);
+            var root = json.RootElement;
+            Assert.Equal((int)expectedStatus, root.GetProperty("status").GetInt32());
+            Assert.Equal(expectedTitle, root.GetProperty("title").GetString());
+            Assert.Equal(
+                ["status", "title", "traceId", "type"],
+                root.EnumerateObject().Select(property => property.Name).Order(StringComparer.Ordinal));
         }
 
         // The usual test client buffers request bodies (for redirects), which adds a Content-Length.

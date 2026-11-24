@@ -66,7 +66,20 @@ X-Content-Type-Options: nosniff
 
 ### Failures
 
-If the database or the store fails during any of these calls, the API returns the default ProblemDetails **500** ("An error occurred while processing your request." and a `traceId`) with no exception message, SQL, connection string or file path, and nothing is saved (WI-8).
+If the database or the store fails during any of these calls, nothing is saved and the API answers with a generic ProblemDetails (`application/problem+json`) from `UnhandledExceptionHandler` (WI-8):
+
+| Failure | Status | `title` |
+|---|---|---|
+| A dependency times out (`TimeoutException`) | **503** | `A required dependency is temporarily unavailable.` |
+| Anything else | **500** | `An unexpected error occurred.` |
+
+The body has only `type`, `title`, `status` and `traceId`: no exception message, SQL, connection string, file path or stack trace.
+
+```jsonc
+{ "type": "https://tools.ietf.org/html/rfc9110#section-15.6.4",
+  "title": "A required dependency is temporarily unavailable.", "status": 503,
+  "traceId": "00-...-00" }
+```
 
 ## Users (changed)
 
