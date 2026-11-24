@@ -59,7 +59,9 @@ namespace Animal.API.Controllers
         public async Task<IActionResult> GetMyProfilePicture(CancellationToken cancellationToken)
         {
             var picture = await _userService.GetMyProfilePictureAsync(_currentUser.Subject, cancellationToken);
+            // Private to this caller: never cached, and never sniffed into another content type.
             Response.Headers.CacheControl = "private, no-store";
+            Response.Headers.XContentTypeOptions = "nosniff";
             return File(picture.Bytes, picture.ContentType);
         }
 

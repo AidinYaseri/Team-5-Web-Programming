@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Animal.API.Contracts;
 using Microsoft.AspNetCore.Authorization;
@@ -10,6 +12,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Animal.IntegrationTests.Api;
 
@@ -61,6 +64,68 @@ public class AuthTests : IClassFixture<AnimalApiFactory>
             _factory.CreateToken(
                 scopes: ["pets.write"], roles: AnimalApiFactory.StaffRoles,
                 expiresAt: DateTimeOffset.UtcNow.AddMinutes(-11)));
+
+        var response = await client.PostAsJsonAsync("/api/pets", NewPet());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedWrite_WithTokenExpiredTwoMinutesAgo_ReturnsUnauthorized()
+    {
+        // Inside ASP.NET's default 5-minute clock skew, so this only fails if the skew is kept small.
+        using var client = CreateBearerClient(
+            _factory.CreateToken(
+                scopes: ["pets.write"], roles: AnimalApiFactory.StaffRoles,
+                expiresAt: DateTimeOffset.UtcNow.AddMinutes(-2)));
+
+        var response = await client.PostAsJsonAsync("/api/pets", NewPet());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedWrite_WithUnsignedToken_ReturnsUnauthorized()
+    {
+        // alg "none": a valid-looking payload with no signature at all.
+        var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var header = Base64UrlEncoder.Encode("{\"alg\":\"none\",\"typ\":\"JWT\"}");
+        var payload = Base64UrlEncoder.Encode(
+            $"{{\"iss\":\"{TestTokenFactory.Issuer}\",\"aud\":\"{TestTokenFactory.Audience}\",\"sub\":\"test-subject\"," +
+            $"\"scope\":\"pets.write\",\"roles\":[\"staff\"],\"exp\":{now + 600},\"nbf\":{now - 60}}}");
+        using var client = CreateBearerClient($"{header}.{payload}.");
+
+        var response = await client.PostAsJsonAsync("/api/pets", NewPet());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedWrite_WithHmacSignedToken_ReturnsUnauthorized()
+    {
+        // Only RS256 is accepted. An HS256 token signed with a guessed shared secret is refused.
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.CreateEncodedJwt(new SecurityTokenDescriptor
+        {
+            Issuer = TestTokenFactory.Issuer,
+            Audience = TestTokenFactory.Audience,
+            Expires = DateTime.UtcNow.AddMinutes(10),
+            Subject = new ClaimsIdentity([new Claim("sub", "test-subject"), new Claim("scope", "pets.write"), new Claim("roles", "staff")]),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(new byte[32]), SecurityAlgorithms.HmacSha256)
+        });
+        using var client = CreateBearerClient(token);
+
+        var response = await client.PostAsJsonAsync("/api/pets", NewPet());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProtectedWrite_WithIdTokenForTheClient_ReturnsUnauthorized()
+    {
+        // Keycloak's ID tokens are issued to the client (aud = animal-client), not to the API.
+        using var client = CreateBearerClient(
+            _factory.CreateToken(audience: "animal-client", scopes: ["pets.write"], roles: AnimalApiFactory.StaffRoles));
 
         var response = await client.PostAsJsonAsync("/api/pets", NewPet());
 

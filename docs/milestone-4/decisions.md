@@ -97,7 +97,7 @@ The role comes from the token the API validated, never from the client. WI-2 add
 | Lifetime | Value |
 |---|---|
 | Access token | 30 minutes (`accessTokenLifespan` in the realm file) |
-| Client cookie | 30 minutes, **not** sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development. Rejected as soon as the access token inside it has expired |
+| Client cookie | 30 minutes, **not** sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development. Holds only a session key; the session and its tokens stay on the server (`InMemoryTicketStore`, WI-10). The session is rejected as soon as its access token has expired |
 | Keycloak SSO session | 30 minutes idle, 10 hours max (defaults) |
 
 Refreshing an expired access token is out of scope. When it expires, the cookie is rejected and the user signs in again (silently, without a password, while the Keycloak session is still active). This goes in the threat model as a known limit.
@@ -142,7 +142,7 @@ public interface IProfilePictureStore
 |---|---|---|
 | `UserId` | int | primary key and foreign key to `Users.Id`, cascade delete |
 | `ContentType` | nvarchar(20) | `image/png` or `image/jpeg` |
-| `Data` | varbinary(max) | the re-encoded image |
+| `Bytes` | varbinary(max) | the re-encoded image |
 | `UpdatedAt` | datetime2 | UTC, from `TimeProvider` |
 
 One row per user, so replacing a picture overwrites the old one. Added with a new migration (`AddProfilePictures`), never by editing old ones.
@@ -151,9 +151,9 @@ One row per user, so replacing a picture overwrites the old one. Added with a ne
 
 ## D9: Picture access
 
-The picture is private. It's only returned by `GET /api/users/me/picture` to the signed-in owner with `users.read`. There is no route with a user id, no public URL and no temporary link, so nothing about expiring links needs to be documented. The response has `Cache-Control: private, no-store` so a shared computer or a proxy doesn't keep a copy.
+The picture is private. It's only returned by `GET /api/users/me/picture` to the signed-in owner with `users.read`. There is no route with a user id, no public URL and no temporary link, so nothing about expiring links needs to be documented. The response has `Cache-Control: private, no-store`, so a shared computer or a proxy doesn't keep a copy, and `X-Content-Type-Options: nosniff`, so the browser never treats it as another type.
 
-The browser can't send our bearer token by itself, so the client (WI-6) shows the picture through its own server: a client route such as `/profile/picture` uses the signed-in user's token on the server side and streams the bytes. No token ever goes into a URL, an `<img>` tag, profile data or a log.
+The browser can't send our bearer token by itself, so the client (WI-6) fetches the picture on the server: the **My profile** component (Blazor Server) calls `GET /api/users/me/picture` with the signed-in user's token and puts the image into the page as a `data:` URL. There is no separate client route for the picture. No token ever goes into a URL, an `<img>` tag, profile data or a log.
 
 ## D10: Profile response
 

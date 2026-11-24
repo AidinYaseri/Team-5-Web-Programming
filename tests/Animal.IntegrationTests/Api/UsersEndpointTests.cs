@@ -198,6 +198,7 @@ namespace Animal.IntegrationTests.Api
             Assert.NotNull(get.Headers.CacheControl);
             Assert.True(get.Headers.CacheControl!.Private);
             Assert.True(get.Headers.CacheControl.NoStore);
+            Assert.Equal("nosniff", Assert.Single(get.Headers.GetValues("X-Content-Type-Options")));
             Assert.Equal("image/png", get.Content.Headers.ContentType?.MediaType);
             Assert.NotEmpty(bytes);
         }

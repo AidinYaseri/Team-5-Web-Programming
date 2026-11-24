@@ -4,6 +4,7 @@ using Animal.API.Services;
 using Animal.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,6 +66,10 @@ builder.Services
         options.TokenValidationParameters.ValidateIssuer = true;
         options.TokenValidationParameters.ValidateAudience = true;
         options.TokenValidationParameters.ValidateLifetime = true;
+        // The default allows tokens up to 5 minutes past their expiry; keep only a small margin for clock drift.
+        options.TokenValidationParameters.ClockSkew = TimeSpan.FromSeconds(30);
+        // Keycloak signs access tokens with RS256. Refuse every other algorithm, including "none".
+        options.TokenValidationParameters.ValidAlgorithms = [SecurityAlgorithms.RsaSha256];
     });
 
 // Adds the local user id for the token's sub, so services can work with Users.Id.

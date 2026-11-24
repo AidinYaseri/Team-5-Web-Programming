@@ -98,7 +98,7 @@ A signed-in user without the role gets **403**, even if their token has the scop
 | `GET /auth/login` | starts sign-in | no change |
 | `POST /auth/logout` | signs out of the cookie and Keycloak | no change |
 | `GET /auth/access-token` | gave the access token to browser JavaScript | **removed**, returns 404 |
-| `GET /profile/picture` | none | new: the client's server fetches the signed-in user's picture with their token and streams it (WI-6) |
+| (no client route for the picture) | none | the **My profile** component fetches the picture on the server with the user's token and shows it as a `data:` URL (WI-6) |
 
 ## Sign-off
 

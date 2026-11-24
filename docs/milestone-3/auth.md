@@ -87,10 +87,14 @@ The API enables validation of:
 `MapInboundClaims = false` preserves the token's claim names, including the
 literal `sub`, `scope`, and `scp` names used by this application.
 
-The code does not assign `TokenValidationParameters.ClockSkew`; it retains the
-JWT bearer framework default of five minutes. The authentication tests use a
-token more than ten minutes expired so it remains outside that default
-tolerance.
+`ClockSkew` is 30 seconds instead of the framework's default of five minutes,
+so a token is refused almost as soon as it expires (a token expired two minutes
+ago gets 401). Only RS256 is accepted (`ValidAlgorithms`), the algorithm Keycloak
+signs with, so unsigned (`alg: none`) and HMAC-signed tokens are refused too.
+`AuthTests` covers both: `ProtectedWrite_WithTokenExpiredTwoMinutesAgo_ReturnsUnauthorized`,
+`ProtectedWrite_WithUnsignedToken_ReturnsUnauthorized`,
+`ProtectedWrite_WithHmacSignedToken_ReturnsUnauthorized` and
+`ProtectedWrite_WithIdTokenForTheClient_ReturnsUnauthorized`.
 
 `ScopeClaims.HasScope` checks both `scope` and `scp` claims. Each claim value
 is split on whitespace, and scope matching is exact and case-sensitive. For
