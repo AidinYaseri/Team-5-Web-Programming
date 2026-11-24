@@ -42,11 +42,18 @@ The API `appsettings.json` files contain placeholder authority/audience values; 
 
    User-secrets are scoped to the client project and stored in the developer profile. They are not encrypted and are for local development only. Do not place the secret in JSON, source code, screenshots, issue comments, or commits. If the client secret is regenerated, replace the stored value.
 
-3. API Development config uses Windows LocalDB integrated authentication. If you use a different local database, set a project-scoped user-secret rather than editing checked-in settings:
+3. API Development config uses Windows LocalDB integrated authentication. If you use a different local database, override `ConnectionStrings:AnimalDb` without editing checked-in settings. Either way works; the API project defines its own `UserSecretsId`, so the user-secret is read when the API runs in Development.
 
    ```powershell
+   # Option A: a user-secret for the API project (kept between terminal sessions)
    dotnet user-secrets set "ConnectionStrings:AnimalDb" "<local-connection-string>" --project src/Animal.API
+
+   # Option B: an environment variable for the current terminal only
+   $env:ConnectionStrings__AnimalDb = "<local-connection-string>"
+   dotnet run --project src/Animal.API
    ```
+
+   An environment variable overrides a user-secret if both are set. Remove the user-secret with `dotnet user-secrets remove "ConnectionStrings:AnimalDb" --project src/Animal.API`.
 
 4. Keep the checked-in API and client Development authority values aligned with Keycloak. Run `dotnet run --project src/Animal.API` and `dotnet run --project src/Animal.Client` in separate terminals. Launch profiles select Development and local ports. Follow `identity-provider-setup.md` for test-user credentials and the sign-in smoke check.
 

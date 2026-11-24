@@ -72,7 +72,7 @@ Source diagrams: [service-diagram.mmd](docs/diagrams/service-diagram.mmd) and [s
 Prerequisites (each machine, once):
 
 - **.NET 10 SDK.** Check with `dotnet --list-sdks`; a .NET 8 SDK alone gives `NETSDK1045`. Install with `winget install Microsoft.DotNet.SDK.10` or from https://aka.ms/dotnet/download.
-- **SQL Server Express LocalDB** (comes with Visual Studio, or install `SqlLocalDB.msi` from the SQL Server Express download → *Download Media* → *LocalDB*). Check with `sqllocaldb info`. Without it the API answers 500 on every database call. To use another SQL Server, set `ConnectionStrings__AnimalDb` instead.
+- **SQL Server Express LocalDB** (comes with Visual Studio, or install `SqlLocalDB.msi` from the SQL Server Express download → *Download Media* → *LocalDB*). Check with `sqllocaldb info`. Without it the API answers 500 on every database call. To use another SQL Server, override `ConnectionStrings:AnimalDb` with a user-secret for `src/Animal.API` or the `ConnectionStrings__AnimalDb` environment variable (steps in [secrets-and-config.md](docs/milestone-4/secrets-and-config.md#local-setup)).
 - **EF Core tools 10:** `dotnet tool install --global dotnet-ef --version 10.0.12` (or `update` if an older version is installed).
 
 If a build fails with `The file is locked by: "Animal.API (...)"`, stop the running API first.
