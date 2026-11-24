@@ -33,7 +33,7 @@ These are decided before anyone starts coding, as the Milestone 4 spec asks, so 
 | D8 | Picture storage | `IProfilePictureStore` with a `ProfilePictures` table in the same database | WI-4, WI-5, WI-8 |
 | D9 | Picture access | Only through `/api/users/me/picture`, no public or temporary links | WI-5, WI-6 |
 | D10 | Profile response | `UserResponse` gets `hasPicture` | WI-5, WI-6, WI-7 |
-| D11 | Errors from failing dependencies | Generic 500 ProblemDetails, nothing saved | WI-5, WI-8 |
+| D11 | Errors from failing dependencies | Generic ProblemDetails: 503 for a timeout, 500 otherwise; nothing saved | WI-5, WI-8 |
 | D12 | Secret store | `dotnet user-secrets` locally, environment variables elsewhere, a gitignored `.env` for Docker | WI-2, WI-9 |
 | D13 | Test doubles | Locally signed tokens for the provider, in-memory and failing stores for storage | WI-7, WI-8, WI-10 |
 | D14 | Contract tests | The integration tests call the real API and read the JSON into the client's own DTOs | WI-7 |
@@ -97,7 +97,7 @@ The role comes from the token the API validated, never from the client. WI-2 add
 | Lifetime | Value |
 |---|---|
 | Access token | 30 minutes (`accessTokenLifespan` in the realm file) |
-| Client cookie | 30 minutes, **not** sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development. Rejected as soon as the access token inside it has expired |
+| Client cookie | 30 minutes, **not** sliding, `HttpOnly`, `SameSite=Lax`, HTTPS-only outside Development. Holds only a session key; the session and its tokens stay on the server (`InMemoryTicketStore`, WI-10). The session is rejected as soon as its access token has expired |
 | Keycloak SSO session | 30 minutes idle, 10 hours max (defaults) |
 
 Refreshing an expired access token is out of scope. When it expires, the cookie is rejected and the user signs in again (silently, without a password, while the Keycloak session is still active). This goes in the threat model as a known limit.
@@ -110,7 +110,7 @@ Refreshing an expired access token is out of scope. When it expires, the cookie 
 |---|---|---|
 | Formats | PNG and JPEG only | 400 |
 | File size | 1 byte to 2 MB (2,097,152 bytes) | 400 |
-| Whole request size | 3 MB (`[RequestSizeLimit]`, leaves room for the multipart wrapping) | 413, cut off before the body is read |
+| Whole request size | 3 MB, leaves room for the multipart wrapping (`[RequestBodyLimit]` filter, runs before the form is bound: a `Content-Length` over 3 MB is refused without reading the body, and a chunked body is cut off by the server at 3 MB) | 413 |
 | Dimensions | at most 2048 × 2048 pixels | 400 |
 | Content type sent by the client | must match the real format (`image/png` or `image/jpeg`) | 400 |
 
@@ -142,7 +142,7 @@ public interface IProfilePictureStore
 |---|---|---|
 | `UserId` | int | primary key and foreign key to `Users.Id`, cascade delete |
 | `ContentType` | nvarchar(20) | `image/png` or `image/jpeg` |
-| `Data` | varbinary(max) | the re-encoded image |
+| `Bytes` | varbinary(max) | the re-encoded image |
 | `UpdatedAt` | datetime2 | UTC, from `TimeProvider` |
 
 One row per user, so replacing a picture overwrites the old one. Added with a new migration (`AddProfilePictures`), never by editing old ones.
@@ -151,9 +151,9 @@ One row per user, so replacing a picture overwrites the old one. Added with a ne
 
 ## D9: Picture access
 
-The picture is private. It's only returned by `GET /api/users/me/picture` to the signed-in owner with `users.read`. There is no route with a user id, no public URL and no temporary link, so nothing about expiring links needs to be documented. The response has `Cache-Control: private, no-store` so a shared computer or a proxy doesn't keep a copy.
+The picture is private. It's only returned by `GET /api/users/me/picture` to the signed-in owner with `users.read`. There is no route with a user id, no public URL and no temporary link, so nothing about expiring links needs to be documented. The response has `Cache-Control: private, no-store`, so a shared computer or a proxy doesn't keep a copy, and `X-Content-Type-Options: nosniff`, so the browser never treats it as another type.
 
-The browser can't send our bearer token by itself, so the client (WI-6) shows the picture through its own server: a client route such as `/profile/picture` uses the signed-in user's token on the server side and streams the bytes. No token ever goes into a URL, an `<img>` tag, profile data or a log.
+The browser can't send our bearer token by itself, so the client (WI-6) fetches the picture on the server: the **My profile** component (Blazor Server) calls `GET /api/users/me/picture` with the signed-in user's token and puts the image into the page as a `data:` URL. There is no separate client route for the picture. No token ever goes into a URL, an `<img>` tag, profile data or a log.
 
 ## D10: Profile response
 
@@ -161,7 +161,7 @@ The browser can't send our bearer token by itself, so the client (WI-6) shows th
 
 ## D11: Errors from failing dependencies
 
-If the database or the store fails, the API returns the normal ProblemDetails **500** from the default exception handler ("An error occurred while processing your request." and a `traceId`). There's no exception message, SQL, connection string or file path in the body. Nothing is saved, because the one save didn't happen. The full error is logged on the server without the image bytes, tokens or personal data. WI-8 tests all of this.
+If the database or the store fails, `UnhandledExceptionHandler` returns a generic ProblemDetails. A timeout (`TimeoutException`) gets **503** ("A required dependency is temporarily unavailable."), because trying again later can work. Anything else gets **500** ("An unexpected error occurred."). The body only has `type`, `title`, `status` and `traceId`: there's no exception message, SQL, connection string or file path. Nothing is saved, because the one save didn't happen. The full error is logged on the server without the image bytes, tokens or personal data. WI-8 tests all of this, and each test checks one exact status: `PutMyPicture_WhenStoreThrows_ReturnsSanitizedProblemDetails_AndKeepsProfileAndPictureUnchanged` (500) and `PutMyPicture_WhenUnitOfWorkThrows_RollsBackPictureAndProfileMutation` (503).
 
 ## D12: Secret store
 
