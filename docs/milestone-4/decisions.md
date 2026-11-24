@@ -110,7 +110,7 @@ Refreshing an expired access token is out of scope. When it expires, the cookie 
 |---|---|---|
 | Formats | PNG and JPEG only | 400 |
 | File size | 1 byte to 2 MB (2,097,152 bytes) | 400 |
-| Whole request size | 3 MB (`[RequestSizeLimit]`, leaves room for the multipart wrapping) | 413, cut off before the body is read |
+| Whole request size | 3 MB, leaves room for the multipart wrapping (`[RequestBodyLimit]` filter, runs before the form is bound: a `Content-Length` over 3 MB is refused without reading the body, and a chunked body is cut off by the server at 3 MB) | 413 |
 | Dimensions | at most 2048 × 2048 pixels | 400 |
 | Content type sent by the client | must match the real format (`image/png` or `image/jpeg`) | 400 |
 

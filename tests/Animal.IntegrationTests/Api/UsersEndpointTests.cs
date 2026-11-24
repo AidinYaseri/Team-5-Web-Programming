@@ -380,6 +380,77 @@ namespace Animal.IntegrationTests.Api
         }
 
         [Fact]
+        public async Task PutMyPicture_RequestOver3MbWithoutContentLength_ReturnsPayloadTooLarge_AndLeavesExistingPictureUnchanged()
+        {
+            // TestServer always adds a Content-Length, so this runs the API on real Kestrel to get a truly
+            // chunked request, where the size is only known while the body is read.
+            using var factory = new AnimalApiFactory();
+            factory.UseKestrel(0);
+            factory.StartServer();
+
+            var identity = NewIdentity();
+            using var client = CreateUnbufferedClient(factory, identity.Subject);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+            await client.PutAsync("/api/users/me/picture", CreateImageUpload(TinyPng(), "image/png"));
+
+            var before = await client.GetAsync("/api/users/me/picture");
+            var beforeBytes = await before.Content.ReadAsByteArrayAsync();
+
+            var payload = new byte[(3 * 1024 * 1024) + 100_000];
+            payload[0] = 1;
+            var upload = await WithoutContentLength(CreateImageUpload(payload, "image/png", "large.png"));
+            Assert.Null(upload.Headers.ContentLength);
+
+            var rejected = await client.PutAsync("/api/users/me/picture", upload);
+            var after = await client.GetAsync("/api/users/me/picture");
+            var afterBytes = await after.Content.ReadAsByteArrayAsync();
+
+            Assert.Equal(HttpStatusCode.RequestEntityTooLarge, rejected.StatusCode);
+            Assert.Equal(HttpStatusCode.OK, after.StatusCode);
+            Assert.Equal(beforeBytes, afterBytes);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_DeclaredLengthOver3Mb_ReturnsPayloadTooLarge_WithoutReadingTheForm()
+        {
+            var identity = NewIdentity();
+            using var client = _factory.CreateAuthenticatedClient(identity.Subject, ["users.read", "users.write"]);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            // The header says the request is over 3 MB, but the body isn't even valid multipart.
+            // If the API parsed the form first, binding would fail with a 400. A 413 means it
+            // decided from the header alone, before reading the body.
+            var upload = new DeclaredLengthContent("not a multipart body"u8.ToArray(), (3 * 1024 * 1024) + 1);
+            upload.Headers.ContentType = MediaTypeHeaderValue.Parse("multipart/form-data; boundary=unused");
+
+            var rejected = await client.PutAsync("/api/users/me/picture", upload);
+            var profile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+
+            Assert.Equal(HttpStatusCode.RequestEntityTooLarge, rejected.StatusCode);
+            Assert.False(profile!.HasPicture);
+        }
+
+        [Fact]
+        public async Task PutMyPicture_ValidImageWithoutContentLength_ReturnsNoContent()
+        {
+            // Real Kestrel, as above: a normal chunked upload must still go through the limit.
+            using var factory = new AnimalApiFactory();
+            factory.UseKestrel(0);
+            factory.StartServer();
+
+            var identity = NewIdentity();
+            using var client = CreateUnbufferedClient(factory, identity.Subject);
+            await client.PutAsJsonAsync("/api/users/me", NewRequest(identity.Email));
+
+            var upload = await WithoutContentLength(CreateImageUpload(TinyPng(), "image/png"));
+            var response = await client.PutAsync("/api/users/me/picture", upload);
+            var profile = await client.GetFromJsonAsync<UserResponse>("/api/users/me");
+
+            Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+            Assert.True(profile!.HasPicture);
+        }
+
+        [Fact]
         public async Task GetMyProfile_WhenPictureExists_ReturnsHasPictureTrue()
         {
             var identity = NewIdentity();
@@ -554,6 +625,38 @@ namespace Animal.IntegrationTests.Api
             file.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
             content.Add(file, "file", fileName);
             return content;
+        }
+
+        // The usual test client buffers request bodies (for redirects), which adds a Content-Length.
+        // CreateDefaultClient has no extra handlers, so content of unknown length really goes chunked.
+        private static HttpClient CreateUnbufferedClient(AnimalApiFactory factory, string subject)
+        {
+            var client = factory.CreateDefaultClient();
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                "Bearer",
+                factory.CreateToken(subject: subject, scopes: ["users.read", "users.write"]));
+            return client;
+        }
+
+        // Copies a multipart upload into content that sends no Content-Length (the request goes chunked).
+        private static async Task<HttpContent> WithoutContentLength(MultipartFormDataContent multipart)
+        {
+            var content = new DeclaredLengthContent(await multipart.ReadAsByteArrayAsync(), declaredLength: null);
+            content.Headers.ContentType = multipart.Headers.ContentType;
+            return content;
+        }
+
+        // Sends the given bytes with whatever Content-Length we declare, or none when it's null.
+        private sealed class DeclaredLengthContent(byte[] body, long? declaredLength) : HttpContent
+        {
+            protected override Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context) =>
+                stream.WriteAsync(body).AsTask();
+
+            protected override bool TryComputeLength(out long length)
+            {
+                length = declaredLength ?? 0;
+                return declaredLength is not null;
+            }
         }
 
         private static byte[] TinyPng() => ReadTestImage("profile-picture.png");

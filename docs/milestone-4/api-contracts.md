@@ -27,7 +27,7 @@ The user always comes from the token's `sub`. There is no user id in any of thes
 |---|---|
 | The `file` field is there and not empty | 400 |
 | File is at most 2 MB (2,097,152 bytes) | 400 |
-| The whole request is at most 3 MB | 413, before the body is read |
+| The whole request is at most 3 MB | 413, before the form is parsed. With a `Content-Length` over 3 MB the body isn't read at all; a chunked body is cut off at 3 MB. |
 | The first bytes are a PNG or JPEG signature | 400 |
 | The part's content type (`image/png` or `image/jpeg`) matches the real format | 400 |
 | The image decodes | 400 (malformed) |
