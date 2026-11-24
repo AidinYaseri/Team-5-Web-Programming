@@ -27,7 +27,7 @@ The user always comes from the token's `sub`. There is no user id in any of thes
 |---|---|
 | The `file` field is there and not empty | 400 |
 | File is at most 2 MB (2,097,152 bytes) | 400 |
-| The whole request is at most 3 MB | 413, before the body is read |
+| The whole request is at most 3 MB | 413, before the form is parsed. With a `Content-Length` over 3 MB the body isn't read at all; a chunked body is cut off at 3 MB. |
 | The first bytes are a PNG or JPEG signature | 400 |
 | The part's content type (`image/png` or `image/jpeg`) matches the real format | 400 |
 | The image decodes | 400 (malformed) |
@@ -66,7 +66,20 @@ X-Content-Type-Options: nosniff
 
 ### Failures
 
-If the database or the store fails during any of these calls, the API returns the default ProblemDetails **500** ("An error occurred while processing your request." and a `traceId`) with no exception message, SQL, connection string or file path, and nothing is saved (WI-8).
+If the database or the store fails during any of these calls, nothing is saved and the API answers with a generic ProblemDetails (`application/problem+json`) from `UnhandledExceptionHandler` (WI-8):
+
+| Failure | Status | `title` |
+|---|---|---|
+| A dependency times out (`TimeoutException`) | **503** | `A required dependency is temporarily unavailable.` |
+| Anything else | **500** | `An unexpected error occurred.` |
+
+The body has only `type`, `title`, `status` and `traceId`: no exception message, SQL, connection string, file path or stack trace.
+
+```jsonc
+{ "type": "https://tools.ietf.org/html/rfc9110#section-15.6.4",
+  "title": "A required dependency is temporarily unavailable.", "status": 503,
+  "traceId": "00-...-00" }
+```
 
 ## Users (changed)
 
@@ -98,7 +111,7 @@ A signed-in user without the role gets **403**, even if their token has the scop
 | `GET /auth/login` | starts sign-in | no change |
 | `POST /auth/logout` | signs out of the cookie and Keycloak | no change |
 | `GET /auth/access-token` | gave the access token to browser JavaScript | **removed**, returns 404 |
-| `GET /profile/picture` | none | new: the client's server fetches the signed-in user's picture with their token and streams it (WI-6) |
+| (no client route for the picture) | none | the **My profile** component fetches the picture on the server with the user's token and shows it as a `data:` URL (WI-6) |
 
 ## Sign-off
 

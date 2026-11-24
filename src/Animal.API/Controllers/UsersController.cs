@@ -1,5 +1,6 @@
 using Animal.API.Authorization;
 using Animal.API.Contracts;
+using Animal.API.Filters;
 using Animal.API.Services;
 using Animal.Domain.Exceptions;
 using Animal.Domain.Services;
@@ -12,8 +13,8 @@ namespace Animal.API.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
+        // The file itself can be 2 MB; the extra 1 MB leaves room for the multipart wrapping.
         private const int ProfilePictureRequestSizeLimitBytes = 3 * 1024 * 1024;
-        private const int MaxMultipartBodySizeBytes = 4 * 1024 * 1024;
 
         private readonly IUserService _userService;
         private readonly ICurrentUser _currentUser;
@@ -59,15 +60,16 @@ namespace Animal.API.Controllers
         public async Task<IActionResult> GetMyProfilePicture(CancellationToken cancellationToken)
         {
             var picture = await _userService.GetMyProfilePictureAsync(_currentUser.Subject, cancellationToken);
+            // Private to this caller: never cached, and never sniffed into another content type.
             Response.Headers.CacheControl = "private, no-store";
+            Response.Headers.XContentTypeOptions = "nosniff";
             return File(picture.Bytes, picture.ContentType);
         }
 
         [HttpPut("me/picture")]
         [Authorize(Policy = AuthorizationPolicies.UsersWrite)]
         [Consumes("multipart/form-data")]
-        [RequestSizeLimit(MaxMultipartBodySizeBytes)]
-        [RequestFormLimits(MultipartBodyLengthLimit = MaxMultipartBodySizeBytes)]
+        [RequestBodyLimit(ProfilePictureRequestSizeLimitBytes)]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -78,11 +80,6 @@ namespace Animal.API.Controllers
             [FromForm] IFormFile? file,
             CancellationToken cancellationToken)
         {
-            if (Request.ContentLength is > ProfilePictureRequestSizeLimitBytes)
-            {
-                return StatusCode(StatusCodes.Status413PayloadTooLarge);
-            }
-
             if (file is null || file.Length == 0)
             {
                 throw new DomainValidationException("A profile picture file is required.");

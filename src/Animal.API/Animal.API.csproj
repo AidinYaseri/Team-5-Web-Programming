@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Lets a developer override ConnectionStrings:AnimalDb locally (dotnet user-secrets). Never put credentials in appsettings. -->
+    <UserSecretsId>animal-api-3d9e4a1c-team5</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
